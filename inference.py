@@ -20,7 +20,7 @@ KEYPOINT_INDEX = {
     "left_hip": 11, "right_hip": 12, "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
 }
 FALL_THRESHOLD = 10  # Number of consecutive frames to consider a fall
-FRAGMENT_DURATION = 10  # Total duration of fall fragment in seconds
+FRAGMENT_DURATION = 20  # Total duration of fall fragment in seconds
 
 def calculate_angle(p1, p2, p3):
     v1 = p1 - p2
@@ -124,7 +124,7 @@ def process_frame(frame):
         
             return annotated_frame, predictions, probabilities, range(len(predictions))  # Return person IDs
     
-    return annotated_frame, [], [], []  # Return annotated_frame, empty predictions, probabilities, and person IDs when no person is detected
+    return [], [], [], []  # Return annotated_frame, empty predictions, probabilities, and person IDs when no person is detected
 
 def save_fall_fragment(frames, person_id):
     os.makedirs("fall_event_videos", exist_ok=True)
