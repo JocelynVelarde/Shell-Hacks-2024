@@ -21,7 +21,6 @@ KEYPOINT_INDEX = {
 }
 FALL_THRESHOLD = 10  # Number of consecutive frames to consider a fall
 FRAGMENT_DURATION = 10  # Total duration of fall fragment in seconds
-FPS = 1
 
 def calculate_angle(p1, p2, p3):
     v1 = p1 - p2
@@ -97,6 +96,7 @@ def predict_fall(fall_attributes):
     
     return predictions, probabilities
 
+
 def process_frame(frame):
     results = model(frame)
     
@@ -124,23 +124,33 @@ def process_frame(frame):
         
             return annotated_frame, predictions, probabilities, range(len(predictions))  # Return person IDs
     
-    return None, [], [], []  # Return None, empty predictions, probabilities, and person IDs when no person is detected
+    return annotated_frame, [], [], []  # Return annotated_frame, empty predictions, probabilities, and person IDs when no person is detected
 
 def save_fall_fragment(frames, person_id):
-    os.makedirs("fall_event_frames", exist_ok=True)
-    for i, frame in enumerate(frames):
-        cv2.imwrite(f"fall_event_frames/person_{person_id}_frame_{i}.jpg", frame)
-    print(f"Saved {len(frames)} frames for fall event of Person {person_id}")
+    os.makedirs("fall_event_videos", exist_ok=True)
+    output_path = f"fall_event_videos/person_{person_id}_fall_event.mp4"
+    
+    if len(frames) > 0:
+        height, width, _ = frames[0].shape
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, 30.0, (width, height))
+        
+        for frame in frames:
+            out.write(frame)
+        
+        out.release()
+        print(f"Saved fall event video for Person {person_id} at {output_path}")
+    else:
+        print(f"No frames to save for Person {person_id}")
 
 def main():
     cap = cv2.VideoCapture(0)  # Use 0 for webcam or provide video file path
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    buffer_size = fps * FRAGMENT_DURATION
     
-    frame_buffer = deque(maxlen=FRAGMENT_DURATION * FPS)
+    frame_buffer = deque(maxlen=buffer_size)
     fall_counters = defaultdict(int)
     fall_detected = defaultdict(bool)
-    fall_timestamps = defaultdict(float)
-    
-    last_save_time = time.time()
     
     while cap.isOpened():
         success, frame = cap.read()
@@ -148,44 +158,29 @@ def main():
             print("Failed to read frame")
             break
         
-        current_time = time.time()
+        frame_buffer.append(frame)
         
-        # Process and save frame once per second
-        if current_time - last_save_time >= 1 / FPS:
-            annotated_frame, predictions, probabilities, person_ids = process_frame(frame)
-            
-            if annotated_frame is not None:
-                # Add the current frame to the buffer
-                frame_buffer.append((current_time, frame))
-                
-                # Check for falls for each person
-                for person_id, prediction in zip(person_ids, predictions):
-                    if prediction == 1:  # Fall detected
-                        fall_counters[person_id] += 1
-                        if fall_counters[person_id] >= FALL_THRESHOLD and not fall_detected[person_id]:
-                            fall_detected[person_id] = True
-                            fall_timestamps[person_id] = current_time
-                            print(f"Fall detected for Person {person_id}! Continuing to capture frames.")
-                    else:
-                        fall_counters[person_id] = 0
-                
-                cv2.imshow("Fall Detection", annotated_frame)
-                
-                for i, (prediction, probability) in enumerate(zip(predictions, probabilities)):
-                    print(f"Person {i} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
-                    print(f"Person {i} - Probability of Fall: {probability:.4f}")
+        annotated_frame, predictions, probabilities, person_ids = process_frame(frame)
+        
+        # Check for falls for each person
+        for person_id, prediction in zip(person_ids, predictions):
+            if prediction == 1:  # Fall detected
+                fall_counters[person_id] += 1
+                if fall_counters[person_id] >= FALL_THRESHOLD and not fall_detected[person_id]:
+                    fall_detected[person_id] = True
+                    print(f"Fall detected for Person {person_id}! Saving video fragment.")
+                    
+                    # Save the fall fragment
+                    fall_frames = list(frame_buffer)
+                    save_fall_fragment(fall_frames, person_id)
             else:
-                fall_counters.clear()  # Reset fall counters when no person is detected
-            
-            last_save_time = current_time
+                fall_counters[person_id] = 0
         
-        # Check if we need to save fall fragments
-        for person_id, fall_time in list(fall_timestamps.items()):
-            if current_time - fall_time >= FRAGMENT_DURATION / 2:
-                # Save the fall fragment
-                fall_frames = [frame for t, frame in frame_buffer if fall_time - FRAGMENT_DURATION / 2 <= t <= fall_time + FRAGMENT_DURATION / 2]
-                save_fall_fragment(fall_frames, person_id)
-                del fall_timestamps[person_id]
+        cv2.imshow("Fall Detection", annotated_frame)
+        
+        for i, (prediction, probability) in enumerate(zip(predictions, probabilities)):
+            print(f"Person {i} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
+            print(f"Person {i} - Probability of Fall: {probability:.4f}")
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
