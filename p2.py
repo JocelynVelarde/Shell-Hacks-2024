@@ -8,7 +8,14 @@ import gridfs
 from pymongo import MongoClient
 from PIL import Image
 import datetime
+import json
+import urllib.parse
 
+with open('config.json') as config_file:
+    config = json.load(config_file)
+
+username = urllib.parse.quote_plus(config["username"])
+password = urllib.parse.quote_plus(config["password"])
 
 # Load the YOLOv8 pose estimation model
 model = YOLO("yolov8m-pose.pt")
@@ -382,8 +389,6 @@ def processVideoWithFile(videoPath): # video, timestap si se cayo, coords boundi
 
 # Main loop for processing video frames
 def main():
-    username = "jldm1111"
-    password = "4OnVFNANWTiJdgeQ"
     uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     database = "shell_hacks"
     collection = "fall_classifer"
@@ -460,8 +465,6 @@ def main():
     # cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    username = "jldm1111"
-    password = "4OnVFNANWTiJdgeQ"
     uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     database = "shell_hacks"
     collection = "fall_classifer"
