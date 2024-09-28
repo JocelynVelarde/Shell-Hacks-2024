@@ -1,30 +1,26 @@
 import streamlit as st
-import requests
 import json
 import urllib.parse
 from pymongo.server_api import ServerApi
-import pymongo
 from pymongo import MongoClient
 import pandas as pd
 
-# Load MongoDB credentials from config.json
 with open('config.json') as config_file:
     config = json.load(config_file)
 
 username = urllib.parse.quote_plus(config["username"])
 password = urllib.parse.quote_plus(config["password"])
 
-uri = f"mongodb+srv://{username}:{password}@cluster0.ny8favk.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 client = MongoClient(uri, server_api=ServerApi('1'))
 db = client["video_database"]
-collection = db["locations"]
+collection = db["locations_camera"]
 
 st.set_page_config(
     page_title="EmergencyAct",
     page_icon="🚨",
 )
-
 st.image("assets/images/emergency.png", use_column_width=True)
 
 st.title(':orange[Accident Location 🚨]')
@@ -33,58 +29,62 @@ st.write("Observe most common accident locations in your area")
 
 st.divider()
 
-st.subheader(":orange[Pinpoint accident locations]")
+st.subheader(":orange[Add a new camera location]")
 
-# Input box for location search with suggestions
-location_query = st.text_input("Search for a location")
+latitude = st.number_input("Enter latitude", format="%.6f")
+longitude = st.number_input("Enter longitude", format="%.6f")
+camera = st.text_input("Enter camera name")
 
-if location_query:
-    # Use OpenStreetMap API to get location suggestions
-    osm_url = f"https://nominatim.openstreetmap.org/search?q={location_query}&format=json"
-    response = requests.get(osm_url)
-    if response.status_code == 200 and response.json():
-        suggestions = response.json()
-        suggestion_names = [suggestion["display_name"] for suggestion in suggestions]
-        selected_suggestion = st.selectbox("Select a location", suggestion_names)
+if st.button("Add Camera"):
+    if latitude and longitude and camera:
+        st.success(f"Camera pinned: Latitude {latitude}, Longitude {longitude}")
 
-        if selected_suggestion:
-            selected_location_data = next(suggestion for suggestion in suggestions if suggestion["display_name"] == selected_suggestion)
-            latitude = float(selected_location_data["lat"])
-            longitude = float(selected_location_data["lon"])
-            st.success(f"Location selected: {selected_suggestion}")
+        location_document = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "camera": camera
+        }
+        collection.insert_one(location_document)
+        st.success("Camera location uploaded successfully!")
 
-            # Upload location to MongoDB
-            location_document = {
-                "name": selected_suggestion,
-                "latitude": latitude,
-                "longitude": longitude
-            }
-            collection.insert_one(location_document)
-            st.success("Location uploaded to MongoDB")
-
-            # Display location on map
-            map_data = pd.DataFrame({
-                'lat': [latitude],
-                'lon': [longitude]
-            })
-            st.map(map_data)
-    else:
-        st.error("No suggestions found. Please try again.")
+        map_data = pd.DataFrame({
+            'lat': [latitude],
+            'lon': [longitude]
+        })
+        st.write("Map data:", map_data)
+        st.map(map_data)
+else:
+    st.error("Please enter both latitude and longitude.")
 
 st.divider()
 
-st.subheader(":orange[Select a stored location]")
+st.subheader(":orange[Select a stored camera location]")
 
-# Fetch locations from MongoDB
-locations = list(collection.find({}, {"_id": 0, "name": 1, "latitude": 1, "longitude": 1}))
-location_names = [location["name"] for location in locations]
+locations = list(collection.find({}, {"_id": 0, "latitude": 1, "longitude": 1, "camera": 1}))
+location_names = [f"Camera: {loc['camera']}, Lat: {loc['latitude']}, Lon: {loc['longitude']}" for loc in locations]
 
 selected_location = st.selectbox("Select a location", location_names)
 
 if selected_location:
-    selected_location_data = next(loc for loc in locations if loc["name"] == selected_location)
+    selected_location_data = next(loc for loc in locations if f"Camera: {loc['camera']}, Lat: {loc['latitude']}, Lon: {loc['longitude']}" == selected_location)
     st.write(f"You selected: {selected_location}")
-    st.map(pd.DataFrame({
+    map_data = pd.DataFrame({
         'lat': [selected_location_data["latitude"]],
-        'lon': [selected_location_data["longitude"]]
-    }))
+        'lon': [selected_location_data["longitude"]],
+        'camera': [selected_location_data["camera"]]
+    })
+    st.write("Map data:", map_data)
+    st.map(map_data)
+
+
+st.divider()
+
+st.subheader(":orange[Locate where accidents happen]")
+
+st.write("Use a get to obtain the bounding box corners of the accident location from mongo")
+
+st.divider()
+
+st.subheader(":orange[Risk Analysis using camera location and person position]")
+
+
