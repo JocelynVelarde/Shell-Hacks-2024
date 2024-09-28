@@ -31,7 +31,7 @@ def EmergencyPrompt(Nose, Right_Shoulder, Left_Shoulder, Right_Elbow, Left_Elbow
     and [x11, y11] for the Right Hip.
 
     Using these coordinates, classify the person's posture into one of the following categories:
-        'standing', 'sitting', 'lying down', or 'falling'.
+        'standing', 'sitting', 'lying down', 'falling', 'running', 'walking'or 'jumping'.
 
     Consider the following factors:
     - Relative distances between key joints (e.g., Shoulder-Hip ratio, Hip-Foot distance)
@@ -42,10 +42,10 @@ def EmergencyPrompt(Nose, Right_Shoulder, Left_Shoulder, Right_Elbow, Left_Elbow
     1. Calculate the distances between relevant joints.
     2. Determine the angles formed by arms, torso, and legs.
     3. Use these metrics to identify posture patterns (e.g., close Shoulder-Hip distances indicate a sitting posture).
-    4. Return a labeled classification ('standing', 'sitting', 'lying down', or 'falling').
+    4. Return a labeled classification ('standing', 'sitting', 'lying down', 'falling', 'running', 'walking'or 'jumping').
     5. Provide a summary of the decision logic.
     """
-
+    
     # Making the request to the API
     body_response = client.chat.body_position_prompt.create(
         engine = "text-davinci-003",
