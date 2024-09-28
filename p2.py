@@ -1,5 +1,7 @@
+import os
 import cv2
 import numpy as np
+import requests
 from ultralytics import YOLO
 import time
 import gridfs
@@ -177,10 +179,10 @@ def detect_fall(fall_attributes, thresholds):
     return falls, falls_indices
 
 
-def download_video_from_mongoDB(video_id, output_path):
-    client = MongoClient("mongodb://localhost:27017/")
-    db = client["fall_detection"]
-    fs = gridfs.GridFS(db)
+def download_video_from_mongoDB(uri, database, collection, video_id, output_path):
+    client = MongoClient(uri)
+    db = client[database]
+    fs = gridfs.GridFS(db, collection)
     
     video_file = fs.get(video_id)
     
@@ -196,6 +198,37 @@ def saveFrameAasImage(frame, timestamp):
     image.save(image_path)
     return image_path
 
+def upload_video_to_api(api_url, video_path):
+    print("Current working directory:", os.getcwd())
+    
+    # Check if the file exists
+    if not os.path.exists(video_path):
+        print(f"File not found: {video_path}")
+        return
+    with open(video_path, "rb") as f:
+        files = {"file": (video_path, f, "video/mp4")}
+        response = requests.post(api_url, files=files)
+        if response.status_code == 200:
+            print("Video uploaded to API successfully.")
+            print("Response:", response.json())
+        else:
+            print("Failed to upload video to API.")
+            print("Status Code:", response.status_code)
+            print("Response:", response.text)
+
+
+def upload_video_to_mongo(uri, database, collection, video_path):
+    # Connect to MongoDB
+    client = MongoClient(uri)
+    db = client[database]
+    fs = gridfs.GridFS(db, collection)
+    
+    # Upload the video file to MongoDB
+    with open(video_path, "rb") as f:
+        video_id = fs.put(f, filename=video_path)
+    
+    print(f"Video uploaded with ID: {video_id}")
+    return video_id
 
 def uploadToMongoDB(video_path, fall_times, bounding_box_coords, images):
     client = MongoClient("mongodb://localhost:27017/")
@@ -204,7 +237,7 @@ def uploadToMongoDB(video_path, fall_times, bounding_box_coords, images):
     
 
     with open(video_path, "rb") as f:
-        video_id = fs.put(f, filename="output.avi")
+        video_id = fs.put(f, filename="output.mp4")
     
 
     for i, timestamp in enumerate(fall_times):
@@ -349,7 +382,19 @@ def processVideoWithFile(videoPath): # video, timestap si se cayo, coords boundi
 
 # Main loop for processing video frames
 def main():
-    processVideoWithFile("video.mp4", "output.mp4")
+    username = "jldm1111"
+    password = "4OnVFNANWTiJdgeQ"
+    uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    database = "shell_hacks"
+    collection = "fall_classifer"
+    
+    # upload_video_to_mongo(uri, database, collection, "video.mp4")
+    
+    upload_video_to_api("http://0.0.0.0:8000/upload_video/", "./video1.mp4")
+    
+    #download_video_from_mongoDB(uri,database ,collection ,"video.mp4", "output.mp4")
+    
+    #processVideoWithFile("video.mp4", "output.mp4")
     # # Define thresholds for fall detection (these values can be tuned)
     # thresholds = {
     #     'centroid_diff': 0.5,  # Adjust this value based on the scale of the bounding box
@@ -415,6 +460,11 @@ def main():
     # cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+    username = "jldm1111"
+    password = "4OnVFNANWTiJdgeQ"
+    uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    database = "shell_hacks"
+    collection = "fall_classifer"
     main()
     # capture_video(5, "output.mp4")
     
