@@ -5,7 +5,7 @@ import requests
 from ultralytics import YOLO
 import time
 import gridfs
-from pymongo import MongoClient
+import pymongo
 from PIL import Image
 import datetime
 import json
@@ -205,23 +205,67 @@ def saveFrameAasImage(frame, timestamp):
     image.save(image_path)
     return image_path
 
-def upload_video_to_api(api_url, video_path):
-    print("Current working directory:", os.getcwd())
+# def upload_video_to_api(api_url):
     
-    # Check if the file exists
-    if not os.path.exists(video_path):
-        print(f"File not found: {video_path}")
-        return
-    with open(video_path, "rb") as f:
-        files = {"file": (video_path, f, "video/mp4")}
-        response = requests.post(api_url, files=files)
-        if response.status_code == 200:
-            print("Video uploaded to API successfully.")
-            print("Response:", response.json())
-        else:
-            print("Failed to upload video to API.")
-            print("Status Code:", response.status_code)
-            print("Response:", response.text)
+#     response = requests.get(api_url)
+#     if response.status_code == 200:
+#         print("Video uploaded successfully.")
+#     else:
+#         print("Error uploading video:", response.text)
+
+# def download_video(filename):
+#     # Define the API endpoint
+#     api_endpoint = f"http://10.110.199.23:8000/download_video/{filename}"
+
+#     # Make the GET request to the API
+#     response = requests.get(api_endpoint)
+
+#     # Check the response status code
+#     if response.status_code == 200:
+#         # Save the video file if the request was successful
+#         with open(f"{filename}.mp4", "wb") as file:
+#             file.write(response.content)
+#         print(f"Video '{filename}.mp4' downloaded successfully!")
+#     else:
+#         # Print the error message if the request failed
+#         print("Failed to download video:", response.json())
+
+def list_files_in_gridfs(uri, database):
+    client = MongoClient(uri)
+    db = client[database]
+    fs = gridfs.GridFS(db)
+    
+    files = fs.list()
+    for file in files:
+        print(file)
+        
+
+# def download_video_from_mongoDB(uri, database, collection ,video_id, output_path):
+#     client = MongoClient(uri)
+#     db = client[database]
+#     fs = gridfs.GridFS(db, collection)
+#     video_file = fs.get(video_id)
+#     with open(output_path, "wb") as f:
+#         f.write(video_file.read())
+    
+#     print(f"Video downloaded to: {output_path}")
+
+def download_video_from_mongoDB(uri, selected_video):
+    client = pymongo.MongoClient(uri)
+    db = client["video_database"]
+    fs = gridfs.GridFS(db)
+    
+    video_metadata = db.videos.find_one({"filename": selected_video})
+    
+    if video_metadata:
+        file_id = video_metadata["file_id"]
+        grid_out = fs.get(file_id)
+        video_bytes = grid_out.read()
+        with open(selected_video, "wb") as f:
+            f.write(video_bytes)
+        print(f"Video downloaded to: {selected_video}")
+    else:
+        print(f"Error: Video '{selected_video}' not found in MongoDB")
 
 
 def upload_video_to_mongo(uri, database, collection, video_path):
@@ -395,11 +439,14 @@ def main():
     
     # upload_video_to_mongo(uri, database, collection, "video.mp4")
     
-    upload_video_to_api("http://0.0.0.0:8000/upload_video/", "./video1.mp4")
+    # download_video("heatmap_new")
     
-    #download_video_from_mongoDB(uri,database ,collection ,"video.mp4", "output.mp4")
+    # processVideoWithFile("./heatmap_new.mp4.mp4")
+    # list_files_in_gridfs(uri, database)
     
-    #processVideoWithFile("video.mp4", "output.mp4")
+    # download_video_from_mongoDB(uri, "heatmap_new (11).mp4")
+    
+    processVideoWithFile("heatmap_new (11).mp4", "output.mp4")
     # # Define thresholds for fall detection (these values can be tuned)
     # thresholds = {
     #     'centroid_diff': 0.5,  # Adjust this value based on the scale of the bounding box
