@@ -11,8 +11,9 @@ cap = cv2.VideoCapture(video_path)
 
 # Define a list of keypoints you're interested in for fall detection
 KEYPOINT_INDEX = {
-    "nose": 0, "left_shoulder": 5, "right_shoulder": 6, "left_hip": 11, "right_hip": 12, 
-    "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
+    "nose": 0, "left_eye": 1, "right_eye": 2, "left_ear": 3, "right_ear": 4, "left_shoulder": 5, 
+    "right_shoulder": 6, "left_elbow": 7, "right_elbow": 8, "left_wrist": 9, "right_wrist": 10,
+    "left_hip": 11, "right_hip": 12, "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
 }
 
 # Utility function to calculate the angle between three points (vectorized)
@@ -30,7 +31,7 @@ def calculate_angle(p1, p2, p3):
     return np.degrees(angle)
 
 # Function to calculate attributes for fall detection (vectorized)
-def calculate_fall_attributes(keypoints, boxes):
+def calculate_fall_attributes(keypoints, boxes, frame_time):
     keypoints = keypoints.cpu().numpy()
     boxes = boxes.cpu().numpy()
     
@@ -43,6 +44,15 @@ def calculate_fall_attributes(keypoints, boxes):
     right_ankle = keypoints[:, KEYPOINT_INDEX['right_ankle']]
     left_knee = keypoints[:, KEYPOINT_INDEX['left_knee']]
     right_knee = keypoints[:, KEYPOINT_INDEX['right_knee']]
+    nose = keypoints[:, KEYPOINT_INDEX['nose']]
+    left_wrist = keypoints[:, KEYPOINT_INDEX['left_wrist']]
+    right_wrist = keypoints[:, KEYPOINT_INDEX['right_wrist']]
+    left_elbow = keypoints[:, KEYPOINT_INDEX['left_elbow']]
+    right_elbow = keypoints[:, KEYPOINT_INDEX['right_elbow']]
+    left_eye = keypoints[:, KEYPOINT_INDEX['left_eye']]
+    right_eye = keypoints[:, KEYPOINT_INDEX['right_eye']]
+    left_ear = keypoints[:, KEYPOINT_INDEX['left_ear']]
+    right_ear = keypoints[:, KEYPOINT_INDEX['right_ear']]
     
     # Extract bounding box dimensions
     x, y, width, height = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
@@ -76,6 +86,14 @@ def calculate_fall_attributes(keypoints, boxes):
     shoulder_to_ankle_angle_left = calculate_angle(left_shoulder, left_hip, left_ankle)
     shoulder_to_ankle_angle_right = calculate_angle(right_shoulder, right_hip, right_ankle)
     shoulder_to_ankle_angle = np.minimum(shoulder_to_ankle_angle_left, shoulder_to_ankle_angle_right)
+    
+    # To track centroid vertical velocity, you need the previous frame's centroid height.
+    # Define a variable to store the previous frame's centroid height
+    previous_centroid_height = np.zeros(len(boxes))
+
+    # Calculate vertical velocity (difference in centroid height between consecutive frames)
+    vertical_velocity = (upper_centroid - previous_centroid_height) / frame_time  # frame_time is the time between frames
+    previous_centroid_height = upper_centroid  # Update for the next frame
 
     return {
         "width": width,
@@ -86,7 +104,8 @@ def calculate_fall_attributes(keypoints, boxes):
         "centroid_difference": centroid_difference,
         "deflection_angle": deflection_angle,
         "hip_to_ankle_angle": hip_to_ankle_angle,
-        "shoulder_to_ankle_angle": shoulder_to_ankle_angle
+        "shoulder_to_ankle_angle": shoulder_to_ankle_angle,
+        "vertical_velocity": vertical_velocity
     }
 
 # Function to detect falls based on thresholds
@@ -116,12 +135,15 @@ def main():
 
     # Loop through the video frames
     while cap.isOpened():
+        time_start = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
         # Read a frame from the video
         success, frame = cap.read()
 
         if success:
             # Run YOLOv8 inference on the frame (pose detection)
             results = model(frame)
+            time = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+            frame_time = time - time_start
 
             # Get keypoints and bounding boxes for each detected person
             keypoints = results[0].keypoints.xy if results[0].keypoints else None
@@ -129,7 +151,7 @@ def main():
 
             if keypoints is not None and bboxes is not None:
                 # Calculate fall-related attributes for all people
-                fall_attributes = calculate_fall_attributes(keypoints, bboxes)
+                fall_attributes = calculate_fall_attributes(keypoints, bboxes, frame_time)
 
                 # Detect falls based on attributes
                 falls = detect_fall(fall_attributes, thresholds)
