@@ -1,9 +1,22 @@
 from twilio.rest import Client
 import streamlit as st
+import sqlite3
 
 def sms(type_of_movement){
     # The location will be get by the camera information
-    location = 'Street Consentida 256, Nuevo Leon, Mexico'
+    def get_location_from_db():
+        # Connect to the database
+        conn = sqlite3.connect('your_database.db')
+        cursor = conn.cursor()
+        
+        # Execute a query to fetch the location
+        cursor.execute("SELECT location FROM your_table WHERE condition")
+        location = cursor.fetchone()[0]
+        
+        # Close the connection
+        conn.close()
+        
+        return location
     account_sid = st.secrets["twilio"]["AS_KEY"]
     auth_token = st.secrets["twilio"]["AT_KEY"]
 
@@ -28,6 +41,13 @@ def sms(type_of_movement){
             # Message sended!
             st.write(f"Message sent with SID: {message.sid}")  
         )
-    
     }
+    
+    elif person_in_danger == 'blood detected':
+        call = client.calls.create(
+            twiml='<Response><Say>Blood detected around the person, immediate assistance required.</Say></Response>',
+            to='+528124363149',
+            from_='+15017122661'
+        )
+        st.write(f"Call initiated with SID: {call.sid}")
 }

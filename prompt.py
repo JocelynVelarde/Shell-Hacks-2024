@@ -60,7 +60,12 @@ def EmergencyPrompt(Nose, Right_Shoulder, Left_Shoulder, Right_Elbow, Left_Elbow
         elif body_response.choices[0].text == 'lying down':
                 return sms('lying down')
 
+    def person_in_danger(body_response):
+        if body_response.choices[0].text == 'blood detected':
+            return sms('blood detected')
+            
     # It prints the request
     print("Body Position Detection Output:")
     return print(body_response.choices[0].text)
+    
 }
