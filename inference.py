@@ -3,6 +3,7 @@ import numpy as np
 from ultralytics import YOLO
 import cv2
 import joblib
+from collections import deque
 
 # Define the model
 model = YOLO("models/yolov8m-pose.pt")
@@ -11,12 +12,14 @@ model = YOLO("models/yolov8m-pose.pt")
 loaded_model = joblib.load('models/random_forest_model.joblib')
 loaded_scaler = joblib.load('models/scaler.joblib')
 
-# Define keypoints
+# Constants
 KEYPOINT_INDEX = {
     "nose": 0, "left_eye": 1, "right_eye": 2, "left_ear": 3, "right_ear": 4, "left_shoulder": 5, 
     "right_shoulder": 6, "left_elbow": 7, "right_elbow": 8, "left_wrist": 9, "right_wrist": 10,
     "left_hip": 11, "right_hip": 12, "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
 }
+FALL_THRESHOLD = 3  # Number of consecutive frames to consider a fall
+FRAME_BUFFER = 5  # Number of frames to capture before and after a fall
 
 def calculate_angle(p1, p2, p3):
     v1 = p1 - p2
@@ -123,6 +126,11 @@ def process_frame(frame):
 def main():
     cap = cv2.VideoCapture(0)  # Use 0 for webcam or provide video file path
     
+    frame_buffer = deque(maxlen=FRAME_BUFFER * 2 + 1)
+    fall_counter = 0
+    fall_detected = False
+    fall_frames = []
+    
     while cap.isOpened():
         success, frame = cap.read()
         if not success:
@@ -130,6 +138,19 @@ def main():
             break
         
         annotated_frame, predictions, probabilities = process_frame(frame)
+        
+        # Add the current frame to the buffer
+        frame_buffer.append(frame)
+        
+        # Check for falls
+        if len(predictions) > 0 and predictions[0] == 1:  # Assuming we're focusing on the first detected person
+            fall_counter += 1
+            if fall_counter >= FALL_THRESHOLD and not fall_detected:
+                fall_detected = True
+                fall_frames = list(frame_buffer)  # Capture the frames around the fall
+                print("Fall detected! Captured frames around the fall event.")
+        else:
+            fall_counter = 0
         
         cv2.imshow("Fall Detection", annotated_frame)
         
@@ -142,6 +163,13 @@ def main():
     
     cap.release()
     cv2.destroyAllWindows()
+    
+    # Save the captured frames if a fall was detected
+    if fall_detected:
+        os.makedirs("fall_event_frames", exist_ok=True)
+        for i, frame in enumerate(fall_frames):
+            cv2.imwrite(f"fall_event_frames/frame_{i}.jpg", frame)
+        print(f"Saved {len(fall_frames)} frames around the fall event in 'fall_event_frames' directory.")
 
 if __name__ == "__main__":
     main()
