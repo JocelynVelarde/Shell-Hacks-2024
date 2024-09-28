@@ -162,8 +162,9 @@ cython_debug/
 #.idea/
 
 # Model weights
-models/
 Dataset CAUCAFall/
 *.zip
 dataset/
 data/
+yolov8m-pose.pt
+yolov8n-pose.pt
