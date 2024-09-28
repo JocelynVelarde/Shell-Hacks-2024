@@ -4,6 +4,7 @@ from ultralytics import YOLO
 import cv2
 import joblib
 from collections import deque, defaultdict
+import time
 
 # Define the model
 model = YOLO("models/yolov8m-pose.pt")
@@ -19,7 +20,8 @@ KEYPOINT_INDEX = {
     "left_hip": 11, "right_hip": 12, "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
 }
 FALL_THRESHOLD = 10  # Number of consecutive frames to consider a fall
-FRAME_BUFFER = 10  # Number of frames to capture before and after a fall
+FRAGMENT_DURATION = 10  # Total duration of fall fragment in seconds
+FPS = 1
 
 def calculate_angle(p1, p2, p3):
     v1 = p1 - p2
@@ -133,9 +135,12 @@ def save_fall_fragment(frames, person_id):
 def main():
     cap = cv2.VideoCapture(0)  # Use 0 for webcam or provide video file path
     
-    frame_buffer = deque(maxlen=FRAME_BUFFER * 2 + 1)
+    frame_buffer = deque(maxlen=FRAGMENT_DURATION * FPS)
     fall_counters = defaultdict(int)
     fall_detected = defaultdict(bool)
+    fall_timestamps = defaultdict(float)
+    
+    last_save_time = time.time()
     
     while cap.isOpened():
         success, frame = cap.read()
@@ -143,30 +148,44 @@ def main():
             print("Failed to read frame")
             break
         
-        annotated_frame, predictions, probabilities, person_ids = process_frame(frame)
+        current_time = time.time()
         
-        if annotated_frame is not None:
-            # Add the current frame to the buffer
-            frame_buffer.append(frame)
+        # Process and save frame once per second
+        if current_time - last_save_time >= 1 / FPS:
+            annotated_frame, predictions, probabilities, person_ids = process_frame(frame)
             
-            # Check for falls for each person
-            for person_id, prediction in zip(person_ids, predictions):
-                if prediction == 1:  # Fall detected
-                    fall_counters[person_id] += 1
-                    if fall_counters[person_id] >= FALL_THRESHOLD and not fall_detected[person_id]:
-                        fall_detected[person_id] = True
-                        save_fall_fragment(list(frame_buffer), person_id)
-                        print(f"Fall detected for Person {person_id}! Captured and saved frames around the fall event.")
-                else:
-                    fall_counters[person_id] = 0
+            if annotated_frame is not None:
+                # Add the current frame to the buffer
+                frame_buffer.append((current_time, frame))
+                
+                # Check for falls for each person
+                for person_id, prediction in zip(person_ids, predictions):
+                    if prediction == 1:  # Fall detected
+                        fall_counters[person_id] += 1
+                        if fall_counters[person_id] >= FALL_THRESHOLD and not fall_detected[person_id]:
+                            fall_detected[person_id] = True
+                            fall_timestamps[person_id] = current_time
+                            print(f"Fall detected for Person {person_id}! Continuing to capture frames.")
+                    else:
+                        fall_counters[person_id] = 0
+                
+                cv2.imshow("Fall Detection", annotated_frame)
+                
+                for i, (prediction, probability) in enumerate(zip(predictions, probabilities)):
+                    print(f"Person {i} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
+                    print(f"Person {i} - Probability of Fall: {probability:.4f}")
+            else:
+                fall_counters.clear()  # Reset fall counters when no person is detected
             
-            cv2.imshow("Fall Detection", annotated_frame)
-            
-            for i, (prediction, probability) in enumerate(zip(predictions, probabilities)):
-                print(f"Person {i} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
-                print(f"Person {i} - Probability of Fall: {probability:.4f}")
-        else:
-            fall_counters.clear()  # Reset fall counters when no person is detected
+            last_save_time = current_time
+        
+        # Check if we need to save fall fragments
+        for person_id, fall_time in list(fall_timestamps.items()):
+            if current_time - fall_time >= FRAGMENT_DURATION / 2:
+                # Save the fall fragment
+                fall_frames = [frame for t, frame in frame_buffer if fall_time - FRAGMENT_DURATION / 2 <= t <= fall_time + FRAGMENT_DURATION / 2]
+                save_fall_fragment(fall_frames, person_id)
+                del fall_timestamps[person_id]
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
