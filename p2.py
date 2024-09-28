@@ -185,20 +185,6 @@ def detect_fall(fall_attributes, thresholds):
             falls_indices.append(i)
     return falls, falls_indices
 
-
-def download_video_from_mongoDB(uri, database, collection, video_id, output_path):
-    client = MongoClient(uri)
-    db = client[database]
-    fs = gridfs.GridFS(db, collection)
-    
-    video_file = fs.get(video_id)
-    
-    with open(output_path, "wb") as f:
-        f.write(video_file.read())
-        
-    print(f"Video downloaded to: {output_path}")
-
-
 def saveFrameAasImage(frame, timestamp):
     image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     image_path = f"fall_{timestamp}.jpg"
@@ -446,7 +432,7 @@ def main():
     
     # download_video_from_mongoDB(uri, "heatmap_new (11).mp4")
     
-    processVideoWithFile("heatmap_new (11).mp4", "output.mp4")
+    processVideoWithFile("heatmap_new (11).mp4")
     # # Define thresholds for fall detection (these values can be tuned)
     # thresholds = {
     #     'centroid_diff': 0.5,  # Adjust this value based on the scale of the bounding box
