@@ -3,7 +3,7 @@ import numpy as np
 from ultralytics import YOLO
 import cv2
 import joblib
-from collections import deque
+from collections import deque, defaultdict
 
 # Define the model
 model = YOLO("models/yolov8m-pose.pt")
@@ -112,7 +112,7 @@ def process_frame(frame):
                 # Annotate the frame
                 x1, y1, x2, y2 = map(int, box)
                 color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
-                label = f"{'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
+                label = f"Person {i} - {'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
                 cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
                 
@@ -120,17 +120,22 @@ def process_frame(frame):
                 for j, (x1, y1) in enumerate(keypoints[i]):
                     cv2.circle(annotated_frame, (int(x1), int(y1)), 5, (0, 255, 0), -1)
         
-            return annotated_frame, predictions, probabilities
+            return annotated_frame, predictions, probabilities, range(len(predictions))  # Return person IDs
     
-    return None, [], []  # Return None instead of annotated_frame when no person is detected
+    return None, [], [], []  # Return None, empty predictions, probabilities, and person IDs when no person is detected
+
+def save_fall_fragment(frames, person_id):
+    os.makedirs("fall_event_frames", exist_ok=True)
+    for i, frame in enumerate(frames):
+        cv2.imwrite(f"fall_event_frames/person_{person_id}_frame_{i}.jpg", frame)
+    print(f"Saved {len(frames)} frames for fall event of Person {person_id}")
 
 def main():
     cap = cv2.VideoCapture(0)  # Use 0 for webcam or provide video file path
     
     frame_buffer = deque(maxlen=FRAME_BUFFER * 2 + 1)
-    fall_counter = 0
-    fall_detected = False
-    fall_frames = []
+    fall_counters = defaultdict(int)
+    fall_detected = defaultdict(bool)
     
     while cap.isOpened():
         success, frame = cap.read()
@@ -138,43 +143,36 @@ def main():
             print("Failed to read frame")
             break
         
-        annotated_frame, predictions, probabilities = process_frame(frame)
+        annotated_frame, predictions, probabilities, person_ids = process_frame(frame)
         
         if annotated_frame is not None:
             # Add the current frame to the buffer
             frame_buffer.append(frame)
             
-            # Check for falls
-            if len(predictions) > 0:
-                if predictions[0] == 1:  # Assuming we're focusing on the first detected person
-                    fall_counter += 1
-                    if fall_counter >= FALL_THRESHOLD and not fall_detected:
-                        fall_detected = True
-                        fall_frames = list(frame_buffer)  # Capture the frames around the fall
-                        print("Fall detected! Captured frames around the fall event.")
+            # Check for falls for each person
+            for person_id, prediction in zip(person_ids, predictions):
+                if prediction == 1:  # Fall detected
+                    fall_counters[person_id] += 1
+                    if fall_counters[person_id] >= FALL_THRESHOLD and not fall_detected[person_id]:
+                        fall_detected[person_id] = True
+                        save_fall_fragment(list(frame_buffer), person_id)
+                        print(f"Fall detected for Person {person_id}! Captured and saved frames around the fall event.")
                 else:
-                    fall_counter = 0
+                    fall_counters[person_id] = 0
             
             cv2.imshow("Fall Detection", annotated_frame)
             
             for i, (prediction, probability) in enumerate(zip(predictions, probabilities)):
-                print(f"Person {i+1} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
-                print(f"Person {i+1} - Probability of Fall: {probability:.4f}")
+                print(f"Person {i} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
+                print(f"Person {i} - Probability of Fall: {probability:.4f}")
         else:
-            fall_counter = 0  # Reset fall counter when no person is detected
+            fall_counters.clear()  # Reset fall counters when no person is detected
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     
     cap.release()
     cv2.destroyAllWindows()
-    
-    # Save the captured frames if a fall was detected
-    if fall_detected:
-        os.makedirs("fall_event_frames", exist_ok=True)
-        for i, frame in enumerate(fall_frames):
-            cv2.imwrite(f"fall_event_frames/frame_{i}.jpg", frame)
-        print(f"Saved {len(fall_frames)} frames around the fall event in 'fall_event_frames' directory.")
 
 if __name__ == "__main__":
     main()
