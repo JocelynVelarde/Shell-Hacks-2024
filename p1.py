@@ -111,6 +111,8 @@ def main():
         'angle': np.radians(45),  # 45 degrees
         'aspect_ratio': 2.0  # Aspect ratio indicating a lying posture
     }
+    video_path = "https://www.youtube.com/watch?v=yk6UVnMn9ts&ab_channel=Apple"
+    cap = cv2.VideoCapture(video_path)
 
     # Loop through the video frames
     while cap.isOpened():
