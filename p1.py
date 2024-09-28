@@ -1,86 +1,81 @@
-# Nose
-# Left Eye
-# Right Eye
-# Left Ear
-# Right Ear
-# Left Shoulder
-# Right Shoulder
-# Left Elbow
-# Right Elbow
-# Left Wrist
-# Right Wrist
-# Left Hip
-# Right Hip
-# Left Knee
-# Right Knee
-# Left Ankle
-# Right Ankle
-
 import cv2
 import numpy as np
 from ultralytics import YOLO
 
-# Load the YOLO pose estimation model
-model = YOLO("models/yolov8m-pose.pt")
+# Load the YOLOv8 pose estimation model
+model = YOLO("yolov8m-pose.pt")
+
+# Open the video file (replace with your video path)
+video_path = "https://www.youtube.com/watch?v=yk6UVnMn9ts&ab_channel=Apple"
+cap = cv2.VideoCapture(video_path)
 
 # Define a list of keypoints you're interested in for fall detection
-# Assuming index order from the paper
 KEYPOINT_INDEX = {
     "nose": 0, "left_shoulder": 5, "right_shoulder": 6, "left_hip": 11, "right_hip": 12, 
     "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
 }
 
-# Utility function to calculate the angle between three points
+# Utility function to calculate the angle between three points (vectorized)
 def calculate_angle(p1, p2, p3):
-    v1 = np.array([p1[0] - p2[0], p1[1] - p2[1]])
-    v2 = np.array([p3[0] - p2[0], p3[1] - p2[1]])
-    angle = np.arctan2(np.linalg.det([v1, v2]), np.dot(v1, v2))
+    v1 = p1 - p2
+    v2 = p3 - p2
+    
+    dot_product = np.sum(v1 * v2, axis=1)
+    v1_norm = np.linalg.norm(v1, axis=1)
+    v2_norm = np.linalg.norm(v2, axis=1)
+    
+    cos_angle = dot_product / (v1_norm * v2_norm)
+    angle = np.arccos(np.clip(cos_angle, -1.0, 1.0))
+    
     return np.degrees(angle)
 
-# Function to calculate attributes for fall detection
-def calculate_fall_attributes(keypoints):
-    # Extract key body points
-    left_shoulder = keypoints[KEYPOINT_INDEX['left_shoulder']]
-    right_shoulder = keypoints[KEYPOINT_INDEX['right_shoulder']]
-    left_hip = keypoints[KEYPOINT_INDEX['left_hip']]
-    right_hip = keypoints[KEYPOINT_INDEX['right_hip']]
-    left_ankle = keypoints[KEYPOINT_INDEX['left_ankle']]
-    right_ankle = keypoints[KEYPOINT_INDEX['right_ankle']]
-    left_knee = keypoints[KEYPOINT_INDEX['left_knee']]
-    right_knee = keypoints[KEYPOINT_INDEX['right_knee']]
+# Function to calculate attributes for fall detection (vectorized)
+def calculate_fall_attributes(keypoints, boxes):
+    keypoints = keypoints.cpu().numpy()
+    boxes = boxes.cpu().numpy()
     
-    # 1. Width (horizontal distance between farthest x coordinates)
-    width = max(keypoints[:, 0]) - min(keypoints[:, 0])
+    # Extract key body points
+    left_shoulder = keypoints[:, KEYPOINT_INDEX['left_shoulder']]
+    right_shoulder = keypoints[:, KEYPOINT_INDEX['right_shoulder']]
+    left_hip = keypoints[:, KEYPOINT_INDEX['left_hip']]
+    right_hip = keypoints[:, KEYPOINT_INDEX['right_hip']]
+    left_ankle = keypoints[:, KEYPOINT_INDEX['left_ankle']]
+    right_ankle = keypoints[:, KEYPOINT_INDEX['right_ankle']]
+    left_knee = keypoints[:, KEYPOINT_INDEX['left_knee']]
+    right_knee = keypoints[:, KEYPOINT_INDEX['right_knee']]
+    
+    # Extract bounding box dimensions
+    x, y, width, height = boxes[:, 0], boxes[:, 1], boxes[:, 2], boxes[:, 3]
 
-    # 2. Height (vertical distance between farthest y coordinates)
-    height = max(keypoints[:, 1]) - min(keypoints[:, 1])
+    # Aspect Ratio
+    aspect_ratio = width / (height + 1e-6)
 
-    # 3. Aspect Ratio
-    aspect_ratio = width / height if height != 0 else 0
+    # Hip Angle (angle between hips and horizontal line)
+    hip_angle = np.arctan2(np.abs(right_hip[:, 1] - left_hip[:, 1]), 
+                           np.abs(right_hip[:, 0] - left_hip[:, 0]))
 
-    # 4. Hip Angle (angle between hips and horizontal line)
-    hip_angle = np.arctan2(abs(right_hip[1] - left_hip[1]), abs(right_hip[0] - left_hip[0]))
+    # Shoulder Angle (angle between shoulders and horizontal line)
+    shoulder_angle = np.arctan2(np.abs(right_shoulder[:, 1] - left_shoulder[:, 1]), 
+                                np.abs(right_shoulder[:, 0] - left_shoulder[:, 0]))
 
-    # 5. Shoulder Angle (angle between shoulders and horizontal line)
-    shoulder_angle = np.arctan2(abs(right_shoulder[1] - left_shoulder[1]), abs(right_shoulder[0] - left_shoulder[0]))
+    # Centroid Difference (difference between upper and lower centroids)
+    upper_centroid = (left_shoulder + right_shoulder) / 2
+    lower_centroid = (left_hip + right_hip) / 2
+    centroid_difference = np.abs(lower_centroid[:, 1] - upper_centroid[:, 1]) / (height + 1e-6)
 
-    # 6. Centroid Difference (difference between upper and lower centroids)
-    upper_centroid = np.mean([left_shoulder, right_shoulder], axis=0)
-    lower_centroid = np.mean([left_hip, right_hip], axis=0)
-    centroid_difference = abs(lower_centroid[1] - upper_centroid[1]) / height if height != 0 else 0
+    # Deflection Angle (angle between centroid line and vertical)
+    deflection_angle = np.arctan2(np.abs(upper_centroid[:, 0] - lower_centroid[:, 0]), 
+                                  np.abs(upper_centroid[:, 1] - lower_centroid[:, 1]))
 
-    # 7. Deflection Angle (angle between centroid line and vertical)
-    deflection_angle = np.arctan2(abs(upper_centroid[0] - lower_centroid[0]), abs(upper_centroid[1] - lower_centroid[1]))
-
-    # 8. Hip to Ankle Angle (smallest angle between hips and ankles)
+    # Hip to Ankle Angle (smallest angle between hips and ankles)
     hip_to_ankle_angle_left = calculate_angle(left_hip, left_knee, left_ankle)
     hip_to_ankle_angle_right = calculate_angle(right_hip, right_knee, right_ankle)
-    hip_to_ankle_angle = min(hip_to_ankle_angle_left, hip_to_ankle_angle_right)
+    hip_to_ankle_angle = np.minimum(hip_to_ankle_angle_left, hip_to_ankle_angle_right)
 
-    # 9. Shoulder to Ankle Angle (smallest angle between shoulders and ankles)
+    # Shoulder to Ankle Angle (smallest angle between shoulders and ankles)
     shoulder_to_ankle_angle_left = calculate_angle(left_shoulder, left_hip, left_ankle)
     shoulder_to_ankle_angle_right = calculate_angle(right_shoulder, right_hip, right_ankle)
-    shoulder_to_ankle_angle = min(shoulder_to_ankle_angle_left, shoulder_to_ankle_angle_right)
+    shoulder_to_ankle_angle = np.minimum(shoulder_to_ankle_angle_left, shoulder_to_ankle_angle_right)
 
     return {
         "width": width,
@@ -94,28 +89,71 @@ def calculate_fall_attributes(keypoints):
         "shoulder_to_ankle_angle": shoulder_to_ankle_angle
     }
 
+# Function to detect falls based on thresholds
+def detect_fall(fall_attributes, thresholds):
+    falls = []
+    for i in range(len(fall_attributes['width'])):
+        # Threshold conditions
+        is_fall = (
+            fall_attributes['centroid_difference'][i] > thresholds['centroid_diff'] or
+            fall_attributes['hip_angle'][i] > thresholds['angle'] or
+            fall_attributes['shoulder_angle'][i] > thresholds['angle'] or
+            fall_attributes['aspect_ratio'][i] > thresholds['aspect_ratio']
+        )
+        falls.append(is_fall)
+    return falls
+
+# Main loop for processing video frames
 def main():
-    # Open the video source (camera)
-    results = model(source=0, conf=0.3, save=True, stream=True)
+    # Define thresholds for fall detection (these values can be tuned)
+    thresholds = {
+        'centroid_diff': 0.5,  # Adjust this value based on the scale of the bounding box
+        'angle': np.radians(45),  # 45 degrees
+        'aspect_ratio': 2.0  # Aspect ratio indicating a lying posture
+    }
 
-    while True:
-        for result in results:
-            frame = result.orig_img  # Get the original image frame
-            keypoints = result.keypoints.xy if result.keypoints else None
-            
-            if keypoints is not None:
-                # Calculate fall-related attributes
-                fall_attributes = calculate_fall_attributes(keypoints)
-                print(fall_attributes)  # Output attributes to monitor them
+    # Loop through the video frames
+    while cap.isOpened():
+        # Read a frame from the video
+        success, frame = cap.read()
 
-            # Display the frame
-            cv2.imshow('Fall Detection Frame', frame)
+        if success:
+            # Run YOLOv8 inference on the frame (pose detection)
+            results = model(frame)
 
-            # Break loop if the 'q' key is pressed
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            # Get keypoints and bounding boxes for each detected person
+            keypoints = results[0].keypoints.xy if results[0].keypoints else None
+            bboxes = results[0].boxes.xywh if results[0].boxes else None
+
+            if keypoints is not None and bboxes is not None:
+                # Calculate fall-related attributes for all people
+                fall_attributes = calculate_fall_attributes(keypoints, bboxes)
+
+                # Detect falls based on attributes
+                falls = detect_fall(fall_attributes, thresholds)
+
+                # Annotate the frame with the detection results (bounding boxes, keypoints, etc.)
+                annotated_frame = results[0].plot()
+
+                # Draw "Fall Detected" or "Normal" label
+                for i, bbox in enumerate(bboxes):
+                    x, y, w, h = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+                    color = (0, 0, 255) if falls[i] else (0, 255, 0)
+                    label = "Fall Detected" if falls[i] else "Normal"
+                    cv2.putText(annotated_frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+
+            # Display the annotated frame with bounding boxes, keypoints, and fall detection results
+            cv2.imshow("Fall Detection", annotated_frame)
+
+            # Break the loop if 'q' is pressed
+            if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
+        else:
+            # Break the loop if the end of the video is reached
+            break
 
-    # Release the video source and close windows
+    # Release the video capture object and close the display window
+    cap.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
