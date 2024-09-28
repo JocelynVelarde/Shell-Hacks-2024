@@ -2,8 +2,6 @@ from openai import OpenAI
 import streamlit as st
 
 def bounding_box_prompt(lat, lon, x1, y1, x2, y2):
-    # x1, y1 are the points at the top left corner of the bounding box
-    # x2, y2 are the points at the bottom right corner of the bounding box
     client = OpenAI(api_key = st.secrets["OPENAI_KEY"])
      
     box_prompt = """
@@ -24,7 +22,6 @@ def bounding_box_prompt(lat, lon, x1, y1, x2, y2):
         temperature = 0.5
     )
     
-    
-    return message
-
+    print("Position of the person: ", response.choices[0].text)
+    return print(response.choices[0].text)
     
