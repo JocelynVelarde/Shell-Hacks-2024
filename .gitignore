@@ -163,3 +163,5 @@ cython_debug/
 
 # Model weights
 models/
+Dataset CAUCAFall/
+*.zip
