@@ -28,9 +28,9 @@ async def upload_file(file: UploadFile = File(...)):
 async def download_file(filename: str):
     file_location = f"uploaded_{filename}"
     if os.path.exists(file_location):
-        return FileResponse(file_location)
-    return {"error": "File not found"}
+        return FileResponse(file_location) 
 
+    return {"error": "File not found"}
 @app.post("/upload_video/")
 async def upload_video(file: UploadFile = File(...)):
     video_location = f"uploaded_video_{file.filename}"
