@@ -104,24 +104,25 @@ def process_frame(frame):
         keypoints = results[0].keypoints.xy.cpu().numpy()
         boxes = results[0].boxes.xyxy.cpu().numpy()
         
-        fall_attributes = calculate_fall_attributes(keypoints, boxes)
-        predictions, probabilities = predict_fall(fall_attributes)
-        
-        for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
-            # Annotate the frame
-            x1, y1, x2, y2 = map(int, box)
-            color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
-            label = f"{'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
-            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+        if len(keypoints) > 0 and len(boxes) > 0:
+            fall_attributes = calculate_fall_attributes(keypoints, boxes)
+            predictions, probabilities = predict_fall(fall_attributes)
             
-            # Draw skeleton
-            for j, (x1, y1) in enumerate(keypoints[i]):
-                cv2.circle(annotated_frame, (int(x1), int(y1)), 5, (0, 255, 0), -1)
+            for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
+                # Annotate the frame
+                x1, y1, x2, y2 = map(int, box)
+                color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
+                label = f"{'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
+                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+                
+                # Draw skeleton
+                for j, (x1, y1) in enumerate(keypoints[i]):
+                    cv2.circle(annotated_frame, (int(x1), int(y1)), 5, (0, 255, 0), -1)
+        
+            return annotated_frame, predictions, probabilities
     
-        return annotated_frame, predictions, probabilities
-    
-    return annotated_frame, [], []
+    return None, [], []  # Return None instead of annotated_frame when no person is detected
 
 def main():
     cap = cv2.VideoCapture(0)  # Use 0 for webcam or provide video file path
@@ -139,24 +140,28 @@ def main():
         
         annotated_frame, predictions, probabilities = process_frame(frame)
         
-        # Add the current frame to the buffer
-        frame_buffer.append(frame)
-        
-        # Check for falls
-        if len(predictions) > 0 and predictions[0] == 1:  # Assuming we're focusing on the first detected person
-            fall_counter += 1
-            if fall_counter >= FALL_THRESHOLD and not fall_detected:
-                fall_detected = True
-                fall_frames = list(frame_buffer)  # Capture the frames around the fall
-                print("Fall detected! Captured frames around the fall event.")
+        if annotated_frame is not None:
+            # Add the current frame to the buffer
+            frame_buffer.append(frame)
+            
+            # Check for falls
+            if len(predictions) > 0:
+                if predictions[0] == 1:  # Assuming we're focusing on the first detected person
+                    fall_counter += 1
+                    if fall_counter >= FALL_THRESHOLD and not fall_detected:
+                        fall_detected = True
+                        fall_frames = list(frame_buffer)  # Capture the frames around the fall
+                        print("Fall detected! Captured frames around the fall event.")
+                else:
+                    fall_counter = 0
+            
+            cv2.imshow("Fall Detection", annotated_frame)
+            
+            for i, (prediction, probability) in enumerate(zip(predictions, probabilities)):
+                print(f"Person {i+1} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
+                print(f"Person {i+1} - Probability of Fall: {probability:.4f}")
         else:
-            fall_counter = 0
-        
-        cv2.imshow("Fall Detection", annotated_frame)
-        
-        for i, (prediction, probability) in enumerate(zip(predictions, probabilities)):
-            print(f"Person {i+1} - Prediction: {'Fall' if prediction == 1 else 'No Fall'}")
-            print(f"Person {i+1} - Probability of Fall: {probability:.4f}")
+            fall_counter = 0  # Reset fall counter when no person is detected
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
