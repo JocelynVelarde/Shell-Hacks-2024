@@ -124,7 +124,7 @@ def process_frame(frame):
         
             return annotated_frame, predictions, probabilities, range(len(predictions))  # Return person IDs
     
-    return [], [], [], []  # Return annotated_frame, empty predictions, probabilities, and person IDs when no person is detected
+    return annotated_frame, [], [], []  # Return annotated_frame, empty predictions, probabilities, and person IDs when no person is detected
 
 def save_fall_fragment(frames, person_id):
     os.makedirs("fall_event_videos", exist_ok=True)
