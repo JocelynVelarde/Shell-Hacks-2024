@@ -2,6 +2,11 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 import time
+import gridfs
+from pymongo import MongoClient
+from PIL import Image
+import datetime
+
 
 # Load the YOLOv8 pose estimation model
 model = YOLO("yolov8m-pose.pt")
@@ -171,30 +176,131 @@ def detect_fall(fall_attributes, thresholds):
             falls_indices.append(i)
     return falls, falls_indices
 
-# Main loop for processing video frames
-def main():
-    # Define thresholds for fall detection (these values can be tuned)
+
+def download_video_from_mongoDB(video_id, output_path):
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["fall_detection"]
+    fs = gridfs.GridFS(db)
+    
+    video_file = fs.get(video_id)
+    
+    with open(output_path, "wb") as f:
+        f.write(video_file.read())
+        
+    print(f"Video downloaded to: {output_path}")
+
+
+def saveFrameAasImage(frame, timestamp):
+    image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    image_path = f"fall_{timestamp}.jpg"
+    image.save(image_path)
+    return image_path
+
+
+def uploadToMongoDB(video_path, fall_times, bounding_box_coords, images):
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["fall_detection"]
+    fs = gridfs.GridFS(db)
+    
+
+    with open(video_path, "rb") as f:
+        video_id = fs.put(f, filename="output.avi")
+    
+
+    for i, timestamp in enumerate(fall_times):
+        bbox = bounding_box_coords[i]
+        image_path = images[i]
+    
+        with open(image_path, "rb") as f:
+            image_id = fs.put(f, filename=image_path)
+ 
+        db.falls.insert_one({
+            "timestamp": timestamp,
+            "bounding_box": bbox,
+            "image_id": image_id,
+            "video_id": video_id,
+            "date": datetime.datetime.now()
+        })
+
+def processVideoWithIntegratedCamPath(outputPath):
     thresholds = {
         'centroid_diff': 0.5,  # Adjust this value based on the scale of the bounding box
         'angle': np.radians(45),  # 45 degrees
         'aspect_ratio': 2.0  # Aspect ratio indicating a lying posture
     }
     capture_video(5, "video.mp4")
-    # Open the video file (replace with your video path)
     video_path = "./video.mp4"
     cap = cv2.VideoCapture("video.mp4")
     
     fall_times = []
-    # get the time of the video
-    # Loop through the video frames
     while cap.isOpened():
-        # Read a frame from the video
         success, frame = cap.read()
 
         time_start = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
         
         if success:
-            # Run YOLOv8 inference on the frame (pose detection)
+            results = model(frame)
+            time = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+            frame_time = time - time_start
+
+            keypoints = results[0].keypoints.xy if results[0].keypoints else None
+            bboxes = results[0].boxes.xywh if results[0].boxes else None
+
+            if keypoints is not None and bboxes is not None:
+                fall_attributes = calculate_fall_attributes(keypoints, bboxes, frame_time)
+                
+                falls, fall_indices = detect_fall(fall_attributes, thresholds)
+                
+                if fall_indices:
+                    fall_times.append(time)
+                    print(f"Fall detected at time: {time:.2f} seconds")
+
+                annotated_frame = results[0].plot()
+
+                for i, bbox in enumerate(bboxes):
+                    x, y, w, h = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+                    color = (0, 0, 255) if falls[i] else (0, 255, 0)
+                    label = "Fall Detected" if falls[i] else "Normal"
+                    cv2.putText(annotated_frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+
+            cv2.imshow("Fall Detection", annotated_frame)
+
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+        else:
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    
+def processVideoWithFile(videoPath): # video, timestap si se cayo, coords bounding box, foto del timestamp que se cayo
+    thresholds = {
+        'centroid_diff': 0.5,  # Adjust this value based on the scale of the bounding box
+        'angle': np.radians(45),  # 45 degrees
+        'aspect_ratio': 2.0  # Aspect ratio indicating a lying posture
+    }
+    cap = cv2.VideoCapture(videoPath)
+    
+    fall_times = []
+    bounding_box_coords = []
+    images = []
+    
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps == 0:
+        fps = 30
+    
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter("output.mp4", fourcc, fps, (frame_width, frame_height))
+    
+    while cap.isOpened():
+        success, frame = cap.read()
+
+        time_start = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+        
+        if success:
             results = model(frame)
             time = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
             frame_time = time - time_start
@@ -211,6 +317,9 @@ def main():
                 
                 if fall_indices:
                     fall_times.append(time)
+                    bounding_box_coords.append(bboxes[fall_indices[0]])
+                    image_path = saveFrameAasImage(frame, time)
+                    images.append(image_path)
                     print(f"Fall detected at time: {time:.2f} seconds")
 
                 # Annotate the frame with the detection results (bounding boxes, keypoints, etc.)
@@ -224,6 +333,7 @@ def main():
                     cv2.putText(annotated_frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
             # Display the annotated frame with bounding boxes, keypoints, and fall detection results
+            out.write(frame)
             cv2.imshow("Fall Detection", annotated_frame)
 
             # Break the loop if 'q' is pressed
@@ -236,6 +346,73 @@ def main():
     # Release the video capture object and close the display window
     cap.release()
     cv2.destroyAllWindows()
+
+# Main loop for processing video frames
+def main():
+    processVideoWithFile("video.mp4", "output.mp4")
+    # # Define thresholds for fall detection (these values can be tuned)
+    # thresholds = {
+    #     'centroid_diff': 0.5,  # Adjust this value based on the scale of the bounding box
+    #     'angle': np.radians(45),  # 45 degrees
+    #     'aspect_ratio': 2.0  # Aspect ratio indicating a lying posture
+    # }
+    # capture_video(5, "video.mp4")
+    # # Open the video file (replace with your video path)
+    # video_path = "./video.mp4"
+    # cap = cv2.VideoCapture("video.mp4")
+    
+    # fall_times = []
+    # # get the time of the video
+    # # Loop through the video frames
+    # while cap.isOpened():
+    #     # Read a frame from the video
+    #     success, frame = cap.read()
+
+    #     time_start = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+        
+    #     if success:
+    #         # Run YOLOv8 inference on the frame (pose detection)
+    #         results = model(frame)
+    #         time = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+    #         frame_time = time - time_start
+
+    #         # Get keypoints and bounding boxes for each detected person
+    #         keypoints = results[0].keypoints.xy if results[0].keypoints else None
+    #         bboxes = results[0].boxes.xywh if results[0].boxes else None
+
+    #         if keypoints is not None and bboxes is not None:
+    #             # Calculate fall-related attributes for all people
+    #             fall_attributes = calculate_fall_attributes(keypoints, bboxes, frame_time)
+                
+    #             falls, fall_indices = detect_fall(fall_attributes, thresholds)
+                
+    #             if fall_indices:
+    #                 fall_times.append(time)
+    #                 print(f"Fall detected at time: {time:.2f} seconds")
+
+    #             # Annotate the frame with the detection results (bounding boxes, keypoints, etc.)
+    #             annotated_frame = results[0].plot()
+
+    #             # Draw "Fall Detected" or "Normal" label
+    #             for i, bbox in enumerate(bboxes):
+    #                 x, y, w, h = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+    #                 color = (0, 0, 255) if falls[i] else (0, 255, 0)
+    #                 label = "Fall Detected" if falls[i] else "Normal"
+    #                 cv2.putText(annotated_frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+
+    #         # Display the annotated frame with bounding boxes, keypoints, and fall detection results
+    #         cv2.imshow("Fall Detection", annotated_frame)
+
+    #         # Break the loop if 'q' is pressed
+    #         if cv2.waitKey(1) & 0xFF == ord("q"):
+    #             break
+    #     else:
+    #         # Break the loop if the end of the video is reached
+    #         break
+
+    # # Release the video capture object and close the display window
+    # cap.release()
+    # cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()

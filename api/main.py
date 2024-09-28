@@ -46,6 +46,10 @@ async def list_videos():
 @app.post("/analyze_video/{video_id}")
 async def analyze_video(video_id: str):
     video_metadata = collection.find_one({"filename": video_id})
+    
+    # DOwnload video from MongoDB using video_id in local storage
+    # call function to process video {processVideo}
+    
     if video_metadata:
         return {"message": "Video found in MongoDB"}
     return {"error": "Video not found in MongoDB"}
