@@ -96,21 +96,21 @@ def process_frame(frame):
     for result in results:
         if result.keypoints is not None and result.boxes is not None:
             keypoints = result.keypoints.xy[0].cpu().numpy()
-            box = result.boxes.xywh[0].cpu().numpy()
+            box = result.boxes.xyxy[0].cpu().numpy()
             
             fall_attributes = calculate_fall_attributes(keypoints, box)
             prediction, probability = predict_fall(fall_attributes)
             
             # Annotate the frame
-            x, y, w, h = map(int, box)
+            x1, y1, x2, y2 = map(int, box)
             color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
             label = f"{'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
-            cv2.rectangle(annotated_frame, (x, y), (x + w, y + h), color, 2)
-            cv2.putText(annotated_frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
             
             # Draw skeleton
-            for i, (x, y) in enumerate(keypoints):
-                cv2.circle(annotated_frame, (int(x), int(y)), 5, (0, 255, 0), -1)
+            for i, (x1, y1) in enumerate(keypoints):
+                cv2.circle(annotated_frame, (int(x1), int(y1)), 5, (0, 255, 0), -1)
     
     return annotated_frame, prediction, probability
 
