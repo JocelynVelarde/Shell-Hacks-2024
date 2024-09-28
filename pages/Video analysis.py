@@ -8,7 +8,7 @@ st.set_page_config(
 
 st.image("assets/images/emergency.png", use_column_width=True)
 
-st.title(':orange[Dashboard 🚨]')
+st.title(':orange[Video analysis 🚨]')
 
 st.write("You can see the different metrics collected from cameras here")
 
