@@ -21,7 +21,7 @@ def EmergencyPrompt(Nose, Right_Shoulder, Left_Shoulder, Right_Elbow, Left_Elbow
     
     #Ecuations for the distances
     
-
+    
     # Body Position Detection
     body_position_prompt = """
     Given an array representing the 2D positions of key body parts for a person, where each index corresponds to a specific joint:

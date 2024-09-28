@@ -1,6 +1,5 @@
 from twilio.rest import Client
 import streamlit as st
-import sqlite3
 
 def sms(type_of_movement){
     account_sid = st.secrets["twilio"]["AS_KEY"]
