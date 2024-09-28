@@ -7,6 +7,8 @@ st.set_page_config(
         page_icon="🚨",
 )
 
+st.image("assets/images/emergency.png", use_column_width=True)
+
 st.title(':orange[Welcome to EmergencyAct 🚨]')
 
 st.write('We use your surveillance cameras to detect accidents and emergencies in real time. We are here to help you!')
