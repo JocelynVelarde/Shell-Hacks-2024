@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from ultralytics import YOLO
+import time
 
 # Load the YOLOv8 pose estimation model
 model = YOLO("yolov8m-pose.pt")
@@ -11,6 +12,55 @@ KEYPOINT_INDEX = {
     "right_shoulder": 6, "left_elbow": 7, "right_elbow": 8, "left_wrist": 9, "right_wrist": 10,
     "left_hip": 11, "right_hip": 12, "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
 }
+
+def capture_video(duration, output_path):
+    cap = cv2.VideoCapture(0)
+    
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        return
+    
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps == 0:
+        fps = 30  # Default to 30 if unable to get FPS
+    
+    # Calculate the total number of frames to capture
+    total_frames = int(duration * fps)
+    
+    # Get the width and height of the frames
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    # Define the codec and create a VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+    
+    start_time = time.time()
+    frame_count = 0
+    while frame_count < total_frames:
+        success, frame = cap.read()
+        if not success:
+            break
+        
+        # Write the frame to the video file
+        out.write(frame)
+        
+        # Display the frame (optional)
+        cv2.imshow('Frame', frame)
+        
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+        frame_count += 1
+    
+    # Release the camera and video writer objects
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    
+    print(f"Video saved to: {output_path}")
+    
 
 # Utility function to calculate the angle between three points (vectorized)
 def calculate_angle(p1, p2, p3):
@@ -129,9 +179,10 @@ def main():
         'angle': np.radians(45),  # 45 degrees
         'aspect_ratio': 2.0  # Aspect ratio indicating a lying posture
     }
+    capture_video(5, "video.mp4")
     # Open the video file (replace with your video path)
     video_path = "./video.mp4"
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture("video.mp4")
     
     fall_times = []
     # get the time of the video
@@ -188,6 +239,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # capture_video(5, "output.mp4")
     
     
     # prompt form the time that the person fell 
