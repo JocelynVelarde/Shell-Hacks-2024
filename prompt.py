@@ -32,7 +32,7 @@ Provide a step-by-step explanation of your approach:
 """
 
 # Making the request to the API
-body_response = client.chat.completions.create(
+body_response = client.chat.body_position_prompt.create(
     engine = "text-davinci-003",
     prompt = body_position_prompt,
     max_tokens = 600,
