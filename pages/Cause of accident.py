@@ -1,5 +1,6 @@
 import streamlit as st
-from algorithms import get_analysis_messages
+from algorithms.gpt_vision import get_analysis_messages
+
 
 api_key = st.secrets["OPEN_AI_KEY"]
 
