@@ -99,7 +99,7 @@ def process_frame(frame):
     
     if results[0].keypoints is not None and results[0].boxes is not None:
         keypoints = results[0].keypoints.xy.cpu().numpy()
-        boxes = results[0].boxes.xywh.cpu().numpy()
+        boxes = results[0].boxes.xyxy.cpu().numpy()
         
         fall_attributes = calculate_fall_attributes(keypoints, boxes)
         predictions, probabilities = predict_fall(fall_attributes)
@@ -113,8 +113,8 @@ def process_frame(frame):
             cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
             
             # Draw skeleton
-            for j, (x, y) in enumerate(keypoints[i]):
-                cv2.circle(annotated_frame, (int(x), int(y)), 5, (0, 255, 0), -1)
+            for j, (x1, y1) in enumerate(keypoints[i]):
+                cv2.circle(annotated_frame, (int(x1), int(y1)), 5, (0, 255, 0), -1)
     
         return annotated_frame, predictions, probabilities
     
