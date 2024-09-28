@@ -55,3 +55,4 @@ def processVideo(videoPath, outputPath):
     
 def getCoordinates(track_box):
     processVideo("video.mp4", "output.mp4")
+    
