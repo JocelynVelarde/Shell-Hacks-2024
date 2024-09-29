@@ -1,16 +1,16 @@
 import os
 import numpy as np
-from ultralytics import YOLO
 import cv2
 import joblib
 from collections import deque, defaultdict
 import json
+from ultralytics import YOLO
 from pytube import YouTube
 
 # Define the model
 model = YOLO("models/yolov8m-pose.pt")
 
-# Load the saved model and scaler
+# Load the saved random forest model and scaler
 loaded_model = joblib.load('models/random_forest_model.joblib')
 loaded_scaler = joblib.load('models/scaler.joblib')
 
