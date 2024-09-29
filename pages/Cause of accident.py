@@ -26,16 +26,6 @@ def download_json_from_mongoDB():
             json_data.append(file.read())
     return json_data
 
-json_str = str(json_data)
-data = json.loads(json_str)
-timestamp = data[0]['timestamp']
-box = data[0]['box']
-keypoints = data[0]['keypoints']
-
-st.write(f"Timestamp: {timestamp}")
-st.write(f"Box: {box}")
-st.write(f"Keypoints: {keypoints}")
-
 # Example usage in Streamlit app
 api_key = st.secrets["OPEN_AI_KEY"]
 
