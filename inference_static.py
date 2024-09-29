@@ -138,39 +138,39 @@ def main():
         keypoints, boxes, predictions, probabilities = process_frame(result)
 
         # Draw bounding boxes and keypoints
-        for box, keypoint, prediction in zip(boxes, keypoints, predictions):
-            x1, y1, x2, y2 = map(int, box)
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
+                # Annotate the frame
+                x1, y1, x2, y2 = map(int, box)
+                color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
+                label = f"Person {i} - {'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+                
+                # Draw skeleton
+                for j, (x1, y1) in enumerate(keypoints[i]):
+                    cv2.circle(frame, (int(x1), int(y1)), 5, (0, 255, 0), -1)
+    #         if prediction == 1:
+    #             cv2.putText(frame, "Fall Detected", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+    #             fall_frames.append(1)
+    #         else:
+    #             fall_frames.append(0)
 
-            for point in keypoint:
-                x, y = map(int, point)
-                cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
+    #     if sum(fall_frames) >= FALL_THRESHOLD:
+    #         timestamp = frame_idx / fps
+    #         fall_timestamps.append(timestamp)
 
-            bbox_data.append({"frame": frame_idx, "bbox": [x1, y1, x2, y2]})
-            keypoints_data.append({"frame": frame_idx, "keypoints": keypoint.tolist()})
+    #     out.write(frame)
+    #     cv2.imshow('Fall Detection', frame)  # Real-time display of frames
 
-            if prediction == 1:
-                cv2.putText(frame, "Fall Detected", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                fall_frames.append(1)
-            else:
-                fall_frames.append(0)
+    #     if cv2.waitKey(1) & 0xFF == ord('q'):
+    #         break
 
-        if sum(fall_frames) >= FALL_THRESHOLD:
-            timestamp = frame_idx / fps
-            fall_timestamps.append(timestamp)
+    #     frame_idx += 1
 
-        out.write(frame)
-        cv2.imshow('Fall Detection', frame)  # Real-time display of frames
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-        frame_idx += 1
-
-    # Save JSON data
-    output_json = os.path.join(output_dir, 'data_' + video_name.replace('.mp4', '.json'))
-    with open(output_json, 'w') as f:
-        json.dump({"bboxes": bbox_data, "keypoints": keypoints_data, "fall_timestamps": fall_timestamps}, f)
+    # # Save JSON data
+    # output_json = os.path.join(output_dir, 'data_' + video_name.replace('.mp4', '.json'))
+    # with open(output_json, 'w') as f:
+    #     json.dump({"bboxes": bbox_data, "keypoints": keypoints_data, "fall_timestamps": fall_timestamps}, f)
 
     # Cleanup
     cap.release()
