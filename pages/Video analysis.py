@@ -3,8 +3,11 @@ import pymongo
 import gridfs
 import urllib.parse
 import json
+import os
 from moviepy.editor import VideoFileClip
 from algorithms.inference_static import download_video_from_mongoDB, process_video, upload_video_to_mongoDB
+
+os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
 
 # Load MongoDB credentials from config.json
 with open('config.json') as config_file:
