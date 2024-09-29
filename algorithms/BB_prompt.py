@@ -12,11 +12,17 @@ def bounding_box_prompt(lat, lon, x1, y1, x2, y2, api_key):
     How to estimate the distance to the person, factoring in optional height or depth information.
     How to convert the calculated angles and distance into the person's real-world latitude and longitude using spherical geometry.
     Any additional considerations, such as the camera's elevation or tilt.
+
+    Latitude: {}
+    Longitude: {}
+    Bounding Box Coordinates:
+    Top-left: ({}, {})
+    Bottom-right: ({}, {})
     """
     
     response = client.chat.box_prompt.create(
         engine = "gpt-4o",
-        prompt = box_prompt,
+        prompt = box_prompt + lat + lon + x1 + y1 + x2 + y2,
         max_tokens = 600,
         temperature = 0.5
     )

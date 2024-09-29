@@ -90,18 +90,13 @@ st.divider()
 
 st.subheader(":orange[Risk Analysis using camera location and person position]")
 
-# Use selected camera's latitude and longitude
-if selected_location:
-    lat = selected_location_data["latitude"]
-    lon = selected_location_data["longitude"]
-else:
-    lat = None
-    lon = None
+lat = 25
+lon = 25
+x1 = 10
+y1 = 10
+x2 = 20
+y2 = 20
 
-x1 = st.number_input("Enter bounding box top-left x-coordinate", format="%.2f")
-y1 = st.number_input("Enter bounding box top-left y-coordinate", format="%.2f")
-x2 = st.number_input("Enter bounding box bottom-right x-coordinate", format="%.2f")
-y2 = st.number_input("Enter bounding box bottom-right y-coordinate", format="%.2f")
 
 if st.button("Find relation between camera and person"):
     if lat and lon and x1 and y1 and x2 and y2 and api_key:
