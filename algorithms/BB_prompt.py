@@ -28,7 +28,9 @@ def AccidentPrompt(lat, lon, x1, y1, x2, y2, api_key):
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": box_prompt}
-        ]
+        ],
+        max_tokens = 500,
+        temperature = 0.5
     )
     
     # Extract and return the response

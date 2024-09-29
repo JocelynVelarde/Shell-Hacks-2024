@@ -101,7 +101,7 @@ y2 = 20
 if st.button("Find relation between camera and person"):
     if lat and lon and x1 and y1 and x2 and y2 and api_key:
         result = AccidentPrompt(lat, lon, x1, y1, x2, y2, api_key)
-        st.write("Bounding Box Prompt Result:")
+        st.write("Answer:")
         st.write(result)
     else:
         st.error("Please enter all required fields.")
