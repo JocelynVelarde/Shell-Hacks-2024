@@ -169,3 +169,5 @@ data/
 yolov8m-pose.pt
 yolov8n-pose.pt
 test/
+output/
+inference_static copy.py
