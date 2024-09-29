@@ -7,6 +7,10 @@ import json
 from ultralytics import YOLO
 from PIL import Image
 import time
+import pymongo
+import gridfs
+import urllib.parse
+
 
 # Define the model
 model = YOLO("models/yolov8m-pose.pt")
@@ -14,6 +18,14 @@ model = YOLO("models/yolov8m-pose.pt")
 # Load the saved random forest model and scaler
 loaded_model = joblib.load('models/random_forest_model.joblib')
 loaded_scaler = joblib.load('models/scaler.joblib')
+
+with open('config.json') as config_file:
+    config = json.load(config_file)
+
+username = urllib.parse.quote_plus(config["username"])
+password = urllib.parse.quote_plus(config["password"])
+
+uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 # Constants
 KEYPOINT_INDEX = {
@@ -188,11 +200,27 @@ def capture_video(duration, output_path):
     
     print(f"Video saved to: {output_path}")
 
-# Main function to process the video and save the output
-def main():
-    input_dir = 'input'
-    video_name = 'input1.avi'
-    video_path = os.path.join(input_dir, video_name)
+def download_video_from_mongoDB(uri, selected_video):
+    client = pymongo.MongoClient(uri)
+    db = client["video_database"]
+    fs = gridfs.GridFS(db)
+    
+    video_metadata = db.videos.find_one({"filename": selected_video})
+    
+    if video_metadata:
+        file_id = video_metadata["file_id"]
+        grid_out = fs.get(file_id)
+        video_bytes = grid_out.read()
+        with open(f"./input/{selected_video}", "wb") as f:
+            f.write(video_bytes)
+        print(f"Video downloaded to: {selected_video}")
+    else:
+        print(f"Error: Video '{selected_video}' not found in MongoDB")
+        
+def process_video(video_path):
+    # input_dir = 'input'
+    # video_name = os.listdir(input_dir)[0]
+    # video_path = os.path.join(input_dir, video_name)
     
     # Open the video file
     cap = cv2.VideoCapture(video_path)
@@ -237,9 +265,11 @@ def main():
             for i, (box, prediction, probability, score) in enumerate(zip(boxes, predictions, probabilities, scores)):
                 x1, y1, x2, y2 = map(int, box)
                 color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
-                label = f"Person {i} - {'Fall' if prediction == 1 else 'Stable'}: {probability:.2f}, Score: {score:.2f}"
+                label1 = f"Person {i} - {'Fall' if prediction == 1 else 'Stable'}: {probability:.2f}"
+                label2 = f"Confidence: {score:.2f}"
                 cv2.rectangle(frame_copy, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame_copy, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+                cv2.putText(frame_copy, label1, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+                cv2.putText(frame_copy, label2, (x1, y1 - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
                 
                 # Draw skeleton keypoints
                 for j, (x, y) in enumerate(keypoints[i]):
@@ -264,12 +294,43 @@ def main():
     out.release()  # Ensure the video writer is closed properly
     cv2.destroyAllWindows()
     
-# Save fall events to a JSON file
-    with open('fall_events.json', 'w') as f:
+    # Save fall events to a JSON file
+    with open(os.path.join(output_dir, 'fall_events.json'), 'w') as f:
         json.dump(fall_events, f)
 
     print(f"Annotated video saved to: {output_video_path}")
     print(f"Fall events saved to: fall_events.json")
+    
+def upload_video_to_mongoDB(uri, video_path):
+    client = pymongo.MongoClient(uri)
+    db = client["video_database"]
+    fs = gridfs.GridFS(db)
+    
+    with open(video_path, "rb") as f:
+        video_bytes = f.read()
+    
+    video_metadata = {
+        "filename": os.path.basename(video_path),
+        "file_id": fs.put(video_bytes)
+    }
+    
+    db.videos.insert_one(video_metadata)
+    
+    print(f"Video uploaded to MongoDB: {video_path}")
+    
+
+# Main function to process the video and save the output
+def main():
+    
+    # download_video_from_mongoDB(uri, selected_video)
+    
+    # upload_video_to_mongoDB(uri, "input/video.mp4")
+    
+    
+    
+    process_video("input/input1.avi")
+    
 
 if __name__ == "__main__":
+    
     main()
