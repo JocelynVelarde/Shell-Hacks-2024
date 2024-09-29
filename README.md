@@ -68,9 +68,9 @@ streamlit_app
 
 Deployed with: Streamlit Cloud
 
-## Demo
+  ## Docs
 
-[YouTube](https://www.youtube.com/watch?v=ZPCu1XzHcSM)
+[DevPost](https://devpost.com/software/emergencyact)
 
 
 ## License
