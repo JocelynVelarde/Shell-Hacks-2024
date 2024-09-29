@@ -30,4 +30,12 @@ if uploaded_files:
     for i, message in enumerate(messages, 1):
         st.subheader(f"Message {i}")
         st.write(message)
+
+st.divider()
+st.subheader(':orange[Ask questions about the accident]')
+chat_input = st.text_area("Type your question here")
+if st.button("Send"):
+    respuesta = get_analysis_messages([image_paths[0]], api_key)[0]
+    st.subheader("Anser:")
+    st.write(respuesta)
     
