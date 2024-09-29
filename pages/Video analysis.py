@@ -73,7 +73,9 @@ if st.button("Download and Analyze Video"):
         output_video = process_video(selected_video)
         upload_video_to_mongoDB(uri, output_video)
         st.success("Video downloaded successfully and uploaded to DB!")
-        st.video(output_video)
+        with open(output_video, "rb") as f:
+            output_video_bytes = f.read()
+        st.video(output_video_bytes)  
         st.video(video_bytes)
     else:
         st.error("Failed to download video.")
