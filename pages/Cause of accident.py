@@ -1,10 +1,12 @@
 import streamlit as st
+import json
+import urllib.parse
 from algorithms.gpt_vision import get_analysis_messages
 
 
+# Example usage in Streamlit app
 api_key = st.secrets["OPEN_AI_KEY"]
 
-# Streamlit app
 st.set_page_config(
     page_title="EmergencyAct",
     page_icon="🚨",
@@ -29,7 +31,7 @@ if uploaded_files:
     analysis_results = get_analysis_messages(image_paths, api_key)
     
     for i, (prompt, message) in enumerate(analysis_results.items(), 1):
-        st.subheader(f"{i}: {prompt}")
+        st.subheader(f"Prompt {i}: {prompt}")
         st.write(message)
 
 st.divider()
@@ -39,4 +41,3 @@ if st.button("Send"):
     respuesta = get_analysis_messages([image_paths[0]], api_key)
     st.subheader("Answer:")
     st.write(respuesta)
-    
