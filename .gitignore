@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.streamlit/
+config.json
+
 # C extensions
 *.so
 
@@ -161,6 +164,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+
 # Model weights
 Dataset CAUCAFall/
 *.zip
@@ -171,3 +175,9 @@ yolov8n-pose.pt
 test/
 output/
 inference_static copy.py
+
+# Models
+models/
+test/
+*.zip
+Dataset CAUCAFall/
