@@ -86,9 +86,14 @@ if st.button("Download and Analyze Video"):
             mp4_video_bytes = f.read()
         st.video(mp4_video_bytes)
         
+         # Convert the processed .avi video to .mp4 format
+        processed_clip = VideoFileClip(output_video)
+        processed_mp4_video = output_video.replace(".avi", ".mp4")
+        processed_clip.write_videofile(processed_mp4_video, codec="libx264")
+        
         # Read and display the processed video
-        with open(output_video, "rb") as f:
-            output_video_bytes = f.read()
-        st.video(output_video_bytes)
+        with open(processed_mp4_video, "rb") as f:
+            processed_mp4_video_bytes = f.read()
+        st.video(processed_mp4_video_bytes)
     else:
         st.error("Failed to download video.")
