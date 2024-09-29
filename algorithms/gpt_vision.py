@@ -61,3 +61,38 @@ def get_analysis_messages(image_paths, api_key):
 
     return result
 
+def chat_prompt(result, user_prompt, api_key):
+    # Combine previous analysis results into a single context string
+    context = "\n".join([f"{key}: {value}" for key, value in result.items()])
+
+    # Construct the new message with context and user prompt
+    messages = [
+        {
+            "role": "system",
+            "content": context
+        },
+        {
+            "role": "user",
+            "content": user_prompt
+        }
+    ]
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    payload = {
+        "model": "gpt-4o-mini",
+        "messages": messages,
+        "max_tokens": 300
+    }
+
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+    response_data = response.json()
+
+    # Extract the output message
+    output_message = response_data['choices'][0]['message']['content']
+    return output_message
+
+

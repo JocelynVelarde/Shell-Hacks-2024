@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import urllib.parse
-from algorithms.gpt_vision import get_analysis_messages
+from algorithms.gpt_vision import get_analysis_messages, chat_prompt
 
 
 # Example usage in Streamlit app
@@ -38,6 +38,6 @@ st.divider()
 st.subheader(':orange[Ask questions about the accident]')
 chat_input = st.text_area("Type your question here")
 if st.button("Send"):
-    respuesta = get_analysis_messages([image_paths[0]], api_key)
-    st.subheader("Answer:")
-    st.write(respuesta)
+        chat_response = chat_prompt(analysis_results, chat_input, api_key)
+        st.subheader("Answer:")
+        st.write(chat_response)
