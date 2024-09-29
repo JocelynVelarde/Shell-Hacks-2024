@@ -8,7 +8,7 @@ from ultralytics import YOLO
 from PIL import Image
 
 # Define the model
-model = YOLO("yolov8m-pose.pt")
+model = YOLO("models/yolov8m-pose.pt")
 
 # Load the saved random forest model and scaler
 loaded_model = joblib.load('models/random_forest_model.joblib')
@@ -97,6 +97,7 @@ def predict_fall(fall_attributes):
     
     return predictions, probabilities
 
+# Process each frame from YOLOv8 results
 def process_frame(result):
     keypoints, boxes = [], []
     if result.keypoints is not None and result.boxes is not None:
@@ -106,75 +107,53 @@ def process_frame(result):
             fall_attributes = calculate_fall_attributes(keypoints, boxes)
             predictions, probabilities = predict_fall(fall_attributes)
     return keypoints, boxes, predictions, probabilities
-        
+
+# Main function to process the video
 def main():
-    input_dir = 'input_videos'
-    output_dir = 'output_videos'
-    video_name = 'input_video.mp4'
-    video_path = os.path.join(input_dir, video_name)
+    input_dir = 'input'
+    video_path = 'input_video.avi'
     
-    # Real-time view initialization
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+    
+    # Real-time window for display
     cv2.namedWindow('Fall Detection', cv2.WINDOW_NORMAL)
 
-    # Perform video inference using YOLOv8 predict method as per the documentation
-    results = model.predict(source=video_path, save=True, stream=True, verbose=True)
+    # Frame processing
+    while cap.isOpened():
+        success, frame = cap.read()
+        if not success:
+            break
 
-    # Output video parameters
-    cap = cv2.VideoCapture(video_path)
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_video_path = os.path.join(output_dir, 'output_' + video_name)
-    out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+        # Run YOLOv8 inference on the current frame
+        results = model(frame)
 
-    bbox_data, keypoints_data, fall_timestamps = [], [], []
-    fall_frames = deque(maxlen=FALL_THRESHOLD)
-    frame_idx = 0
+        # Process the results to extract keypoints and fall predictions
+        for result in results:
+            frame_copy = frame.copy()
+            keypoints, boxes, predictions, probabilities = process_frame(result)
 
-    # Process results in real-time
-    for result in results:
-        frame = result.orig_img  # Get the original frame
-        keypoints, boxes, predictions, probabilities = process_frame(result)
-
-        # Draw bounding boxes and keypoints
-        for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
-                # Annotate the frame
+            # Annotate frame with fall detection results
+            for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
                 x1, y1, x2, y2 = map(int, box)
                 color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
                 label = f"Person {i} - {'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
-                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+                cv2.rectangle(frame_copy, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(frame_copy, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
                 
-                # Draw skeleton
-                for j, (x1, y1) in enumerate(keypoints[i]):
-                    cv2.circle(frame, (int(x1), int(y1)), 5, (0, 255, 0), -1)
-    #         if prediction == 1:
-    #             cv2.putText(frame, "Fall Detected", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-    #             fall_frames.append(1)
-    #         else:
-    #             fall_frames.append(0)
+                # Draw skeleton keypoints
+                for j, (x, y) in enumerate(keypoints[i]):
+                    cv2.circle(frame_copy, (int(x), int(y)), 5, (0, 255, 0), -1)
+            
+            # Display the annotated frame
+            cv2.imshow('Fall Detection', frame_copy)
 
-    #     if sum(fall_frames) >= FALL_THRESHOLD:
-    #         timestamp = frame_idx / fps
-    #         fall_timestamps.append(timestamp)
-
-    #     out.write(frame)
-    #     cv2.imshow('Fall Detection', frame)  # Real-time display of frames
-
-    #     if cv2.waitKey(1) & 0xFF == ord('q'):
-    #         break
-
-    #     frame_idx += 1
-
-    # # Save JSON data
-    # output_json = os.path.join(output_dir, 'data_' + video_name.replace('.mp4', '.json'))
-    # with open(output_json, 'w') as f:
-    #     json.dump({"bboxes": bbox_data, "keypoints": keypoints_data, "fall_timestamps": fall_timestamps}, f)
+            # Break the loop if 'q' is pressed
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
 
     # Cleanup
     cap.release()
-    out.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
