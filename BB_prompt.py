@@ -1,8 +1,7 @@
 from openai import OpenAI
-import streamlit as st
 
-def bounding_box_prompt(lat, lon, x1, y1, x2, y2):
-    client = OpenAI(api_key = st.secrets["OPENAI_KEY"])
+def bounding_box_prompt(lat, lon, x1, y1, x2, y2, api_key):
+    client = OpenAI(api_key = api_key)
      
     box_prompt = """
     Given the latitude and longitude of a camera, along with the bounding box coordinates (x1, y1) and (x2, y2) representing the top-left and bottom-right corners of a person's bounding box in an image captured by the camera, estimate the person's real-world position (latitude and longitude). Leverage the camera’s field of view, image resolution, and optionally, the person’s height or depth data to convert the bounding box coordinates into real-world angles and distance. Use spherical geometry to calculate the person’s geographic position relative to the camera.
@@ -16,12 +15,12 @@ def bounding_box_prompt(lat, lon, x1, y1, x2, y2):
     """
     
     response = client.chat.box_prompt.create(
-        engine = "text-davinci-003",
+        engine = "gpt-4o",
         prompt = box_prompt,
         max_tokens = 600,
         temperature = 0.5
     )
     
     print("Position of the person: ", response.choices[0].text)
-    return print(response.choices[0].text)
+    return response.choices[0].text
     
