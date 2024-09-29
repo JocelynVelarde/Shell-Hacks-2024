@@ -46,10 +46,11 @@ def get_analysis_messages(image_paths, api_key):
             }
         ]
 
+        # Prompt based on the images
         payload = {
             "model": "gpt-4o-mini",
             "messages": messages,
-            "max_tokens": 300
+            "max_tokens": 350
         }
 
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
@@ -82,10 +83,11 @@ def chat_prompt(result, user_prompt, api_key):
         "Authorization": f"Bearer {api_key}"
     }
 
+    # Message after the user prompt
     payload = {
         "model": "gpt-4o-mini",
         "messages": messages,
-        "max_tokens": 300
+        "max_tokens": 250
     }
 
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
