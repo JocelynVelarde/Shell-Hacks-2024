@@ -21,7 +21,7 @@ KEYPOINT_INDEX = {
     "right_shoulder": 6, "left_elbow": 7, "right_elbow": 8, "left_wrist": 9, "right_wrist": 10,
     "left_hip": 11, "right_hip": 12, "left_knee": 13, "right_knee": 14, "left_ankle": 15, "right_ankle": 16
 }
-FALL_THRESHOLD = 10  # Number of consecutive frames to consider a fall
+CONSECUTIVE_FALL_FRAMES = 10
 FRAGMENT_DURATION = 10  # Total duration of fall fragment in seconds
 
 def calculate_angle(p1, p2, p3):
@@ -98,8 +98,17 @@ def predict_fall(fall_attributes):
     
     return predictions, probabilities
 
-# Process each frame from YOLOv8 results
-def process_frame(result):
+# Dictionary to hold fall events
+fall_events = []
+
+# Initialize a counter for consecutive fall detections
+consecutive_fall_count = 0
+fall_detected = False
+
+# Modify the process_frame function to track falls
+def process_frame(result, frame_index, frame_time):
+    global consecutive_fall_count, fall_detected
+    
     keypoints, boxes = [], []
     if result.keypoints is not None and result.boxes is not None:
         keypoints = result.keypoints.xy.cpu().numpy()
@@ -107,6 +116,25 @@ def process_frame(result):
         if len(keypoints) > 0 and len(boxes) > 0:
             fall_attributes = calculate_fall_attributes(keypoints, boxes)
             predictions, probabilities = predict_fall(fall_attributes)
+            
+            # Check if fall is detected
+            for i, prediction in enumerate(predictions):
+                if prediction == 1:
+                    consecutive_fall_count += 1
+                    if consecutive_fall_count == CONSECUTIVE_FALL_FRAMES:
+                        # Log fall event
+                        fall_events.append({
+                            "timestamp": frame_time,
+                            "box": boxes[i].tolist(),
+                            "keypoints": keypoints[i].tolist()
+                        })
+                        fall_detected = True
+                else:
+                    consecutive_fall_count = 0  # Reset counter if no fall is detected
+        else:
+            # Reset fall detection if no keypoints/boxes are detected
+            consecutive_fall_count = 0
+
     return keypoints, boxes, predictions, probabilities
 
 def capture_video(duration, output_path):
@@ -183,7 +211,10 @@ def main():
     # Real-time window for display
     cv2.namedWindow('Fall Detection', cv2.WINDOW_NORMAL)
 
-    # Frame processing
+   # Frame processing with timestamp
+    frame_time = 0  # Initialize frame time counter
+    frame_index = 0
+    
     while cap.isOpened():
         success, frame = cap.read()
         if not success:
@@ -195,7 +226,9 @@ def main():
         # Process the results to extract keypoints and fall predictions
         for result in results:
             frame_copy = frame.copy()
-            keypoints, boxes, predictions, probabilities = process_frame(result)
+
+            # Process the current frame with timestamp
+            keypoints, boxes, predictions, probabilities = process_frame(result, frame_index, frame_time)
 
             # Annotate frame with fall detection results
             for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
@@ -214,6 +247,10 @@ def main():
             
             # Display the annotated frame
             cv2.imshow('Fall Detection', frame_copy)
+            
+            # Increment frame time based on FPS
+            frame_time += 1 / fps
+            frame_index += 1
 
             # Break the loop if 'q' is pressed
             if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -223,8 +260,13 @@ def main():
     cap.release()
     out.release()  # Ensure the video writer is closed properly
     cv2.destroyAllWindows()
+    
+# Save fall events to a JSON file
+    with open('fall_events.json', 'w') as f:
+        json.dump(fall_events, f)
 
     print(f"Annotated video saved to: {output_video_path}")
+    print(f"Fall events saved to: fall_events.json")
 
 if __name__ == "__main__":
     main()
