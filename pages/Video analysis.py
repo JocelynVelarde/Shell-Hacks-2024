@@ -2,9 +2,10 @@ import streamlit as st
 import pymongo
 import gridfs
 import urllib.parse
+import subprocess
 import json
 from moviepy.editor import VideoFileClip
-from algorithms.inference_static import download_video_from_mongoDB, process_video, upload_video_to_mongoDB
+from algorithms.inference_static import download_video_from_mongoDB, process_video, upload_video_to_mongoDB, upload_json_to_mongoDB
 
 # Load MongoDB credentials from config.json
 with open('config.json') as config_file:
@@ -69,10 +70,10 @@ if st.button("Download and Analyze Video"):
         with open(selected_video, "wb") as f:
             f.write(video_bytes)
 
-        # Convert the .avi video to .mp4 format
-        clip = VideoFileClip(selected_video)
+        # Convert the original .avi video to .mp4 format using ffmpeg
         mp4_video = selected_video.replace(".avi", ".mp4")
-        clip.write_videofile(mp4_video, codec="libx264")
+        conversion_command = f"ffmpeg -i {selected_video} -c:v libx264 {mp4_video}"
+        subprocess.run(conversion_command, shell=True, check=True)
         
         # Process the video
         download_video_from_mongoDB(uri, selected_video)
@@ -86,14 +87,17 @@ if st.button("Download and Analyze Video"):
             mp4_video_bytes = f.read()
         st.video(mp4_video_bytes)
         
-         # Convert the processed .avi video to .mp4 format
-        processed_clip = VideoFileClip(output_video)
+        # Convert the processed .avi video to .mp4 format using ffmpeg
         processed_mp4_video = output_video.replace(".avi", ".mp4")
-        processed_clip.write_videofile(processed_mp4_video, codec="libx264")
+        conversion_command = f"ffmpeg -i {output_video} -c:v libx264 {processed_mp4_video}"
+        subprocess.run(conversion_command, shell=True, check=True)
         
         # Read and display the processed video
         with open(processed_mp4_video, "rb") as f:
             processed_mp4_video_bytes = f.read()
         st.video(processed_mp4_video_bytes)
+
+        upload_json_to_mongoDB(uri, "fall_events.json")
+    
     else:
         st.error("Failed to download video.")

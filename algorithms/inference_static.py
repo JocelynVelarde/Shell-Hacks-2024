@@ -302,6 +302,23 @@ def process_video(video_path):
 
     print(f"Annotated video saved to: {output_video_path}")
     print(f"Fall events saved to: fall_events.json")
+
+def upload_json_to_mongoDB(uri, json_path):
+    client = pymongo.MongoClient(uri)
+    db = client["video_database"]
+    fs = gridfs.GridFS(db)
+    
+    with open(json_path, "r") as f:
+        json_bytes = f.read()
+    
+    json_metadata = {
+        "filename": os.path.basename(json_path),
+        "file_id": fs.put(json_bytes)
+    }
+    
+    db.jsons.insert_one(json_metadata)
+    
+    print(f"JSON uploaded to MongoDB: {json_path}")
     
 def upload_video_to_mongoDB(uri, video_path):
     client = pymongo.MongoClient(uri)
