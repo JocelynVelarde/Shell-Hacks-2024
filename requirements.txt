@@ -1,2 +1,8 @@
 fastapi
 uvicorn
+pymongo
+urlib
+pandas
+openai
+gridfs
+moviepy
