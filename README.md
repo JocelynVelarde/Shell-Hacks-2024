@@ -62,6 +62,32 @@ streamlit_app
 │  └─ instructions.py
 │  └─ Video analysis.py
 ```
+## Libraries used 📓
+- **streamlit**
+- **CV2**
+- **ultralytics**
+- **numpy**
+- **base64**
+- **os**
+- **requests**
+- **openai**
+- **collections**
+- **datetime**
+- **torch**
+- **pickle**
+- **sklearn**
+- **joblib**
+- **pandas**
+- **numpy**
+- **fastapi**
+- **shutil**
+- **pymongo**
+- **urlib**
+- **aiohtpp**
+- **json**
+- **PIL**
+- **gridfs**
+- **BASE64**
 
 Deployed with: Streamlit Cloud
 
