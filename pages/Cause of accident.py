@@ -29,14 +29,14 @@ if uploaded_files:
     analysis_results = get_analysis_messages(image_paths, api_key)
     
     for i, (prompt, message) in enumerate(analysis_results.items(), 1):
-        st.subheader(f"Prompt {i}: {prompt}")
+        st.subheader(f"{i}: {prompt}")
         st.write(message)
 
 st.divider()
 st.subheader(':orange[Ask questions about the accident]')
 chat_input = st.text_area("Type your question here")
 if st.button("Send"):
-    respuesta = get_analysis_messages([image_paths[0]], api_key)[0]
-    st.subheader("Anser:")
+    respuesta = get_analysis_messages([image_paths[0]], api_key)
+    st.subheader("Answer:")
     st.write(respuesta)
     
