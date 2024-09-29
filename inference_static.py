@@ -138,7 +138,7 @@ def main():
             for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
                 x1, y1, x2, y2 = map(int, box)
                 color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
-                label = f"Person {i} - {'Fall' if prediction == 1 else 'No Fall'}: {probability:.2f}"
+                label = f"Person {i} - {'Fall' if prediction == 1 else 'Stable'}: {probability:.2f}"
                 cv2.rectangle(frame_copy, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame_copy, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
                 
