@@ -157,15 +157,28 @@ def capture_video(duration, output_path):
     
     print(f"Video saved to: {output_path}")
 
-# Main function to process the video
+# Main function to process the video and save the output
 def main():
-    capture_video(10, './input/input1.avi')
     input_dir = 'input'
-    video_name = os.listdir(input_dir)[0]
+    video_name = 'input1.avi'
     video_path = os.path.join(input_dir, video_name)
     
     # Open the video file
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(video_path)
+    
+    # Get video details for output
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    
+    # Output path for the saved video with annotations
+    output_dir = 'output'
+    os.makedirs(output_dir, exist_ok=True)
+    output_video_path = os.path.join(output_dir, 'output_with_fall_detection.avi')
+
+    # Create VideoWriter to save annotated video
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
     
     # Real-time window for display
     cv2.namedWindow('Fall Detection', cv2.WINDOW_NORMAL)
@@ -196,6 +209,9 @@ def main():
                 for j, (x, y) in enumerate(keypoints[i]):
                     cv2.circle(frame_copy, (int(x), int(y)), 5, (0, 255, 0), -1)
             
+            # Write annotated frame to video file
+            out.write(frame_copy)
+            
             # Display the annotated frame
             cv2.imshow('Fall Detection', frame_copy)
 
@@ -205,7 +221,10 @@ def main():
 
     # Cleanup
     cap.release()
+    out.release()  # Ensure the video writer is closed properly
     cv2.destroyAllWindows()
+
+    print(f"Annotated video saved to: {output_video_path}")
 
 if __name__ == "__main__":
     main()
