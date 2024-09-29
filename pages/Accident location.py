@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import urllib.parse
-from algorithms.BB_prompt import bounding_box_prompt
+from algorithms.BB_prompt import AccidentPrompt
 from pymongo.server_api import ServerApi
 from pymongo import MongoClient
 import pandas as pd
@@ -100,7 +100,7 @@ y2 = 20
 
 if st.button("Find relation between camera and person"):
     if lat and lon and x1 and y1 and x2 and y2 and api_key:
-        result = bounding_box_prompt(lat, lon, x1, y1, x2, y2, api_key)
+        result = AccidentPrompt(lat, lon, x1, y1, x2, y2, api_key)
         st.write("Bounding Box Prompt Result:")
         st.write(result)
     else:
