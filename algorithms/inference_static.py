@@ -10,29 +10,6 @@ import time
 import pymongo
 import gridfs
 import urllib.parse
-import torch.nn as nn
-import torch
-
-# Define the model
-class FallDetectionModel(nn.Module):
-    def _init_(self, input_size):
-        super(FallDetectionModel, self)._init_()
-        self.fc1 = nn.Linear(input_size, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 16)
-        self.fc4 = nn.Linear(16, 1)
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.2)
-        self.sigmoid = nn.Sigmoid()
-        
-    def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.relu(self.fc2(x))
-        x = self.dropout(x)
-        x = self.relu(self.fc3(x))
-        x = self.sigmoid(self.fc4(x))
-        return x
 
 
 # Define the model
@@ -41,12 +18,6 @@ model = YOLO("models/yolov8m-pose.pt")
 # Load the saved random forest model and scaler
 loaded_model = joblib.load('models/random_forest_model.joblib')
 loaded_scaler = joblib.load('models/scaler.joblib')
-
-# Load the MLP:
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-mlp = FallDetectionModel(9).to(device)
-mlp.load_state_dict(torch.load('models/fall_detection_model.pth'))
-mlp.eval()
 
 with open('config.json') as config_file:
     config = json.load(config_file)
@@ -129,18 +100,13 @@ def calculate_fall_attributes(keypoints, boxes):
     
     return np.array(attributes)
 
-def predict_fall(fall_attributes, algorithm='ml'):
-    if algorithm == 'ml':
-        # Preprocess the input features
-        features_scaled = loaded_scaler.transform(fall_attributes)
-        
-        # Make prediction
-        predictions = abs(1 - loaded_model.predict(features_scaled))  # Invert the prediction (0: Fall, 1: Stable)
-        probabilities = loaded_model.predict_proba(features_scaled)[:, 1]  # Probability of positive class
-    elif algorithm == 'dl':
-        fall_attributes_tensor = torch.FloatTensor(fall_attributes).to(device)
-        probabilities = mlp(fall_attributes_tensor)
-        predictions = (probabilities > 0.5).int().cpu().numpy()
+def predict_fall(fall_attributes):
+    # Preprocess the input features
+    features_scaled = loaded_scaler.transform(fall_attributes)
+    
+    # Make prediction
+    predictions = loaded_model.predict(features_scaled)
+    probabilities = loaded_model.predict_proba(features_scaled)[:, 1]  # Probability of positive class
     return predictions, probabilities
 
 # Dictionary to hold fall events
@@ -155,6 +121,7 @@ def process_frame(result, frame_index, frame_time):
     global consecutive_fall_count, fall_detected
     
     keypoints, boxes, scores = [], [], []
+    predictions, probabilities = [], []  # Initialize as empty lists
     if result.keypoints is not None and result.boxes is not None:
         keypoints = result.keypoints.xy.cpu().numpy()
         boxes = result.boxes.xyxy.cpu().numpy()
@@ -380,7 +347,7 @@ def main():
     
     
     
-    process_video("input/input1.avi")
+    process_video("input/metro.mp4")
     
 
 if __name__ == "__main__":
