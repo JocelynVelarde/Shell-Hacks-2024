@@ -18,6 +18,7 @@ model = YOLO("models/yolov8m-pose.pt")
 # Load the saved random forest model and scaler
 loaded_model = joblib.load('models/random_forest_model.joblib')
 loaded_scaler = joblib.load('models/scaler.joblib')
+mlp = None
 
 with open('config.json') as config_file:
     config = json.load(config_file)
@@ -100,14 +101,16 @@ def calculate_fall_attributes(keypoints, boxes):
     
     return np.array(attributes)
 
-def predict_fall(fall_attributes):
-    # Preprocess the input features
-    features_scaled = loaded_scaler.transform(fall_attributes)
-    
-    # Make prediction
-    predictions = abs(1 - loaded_model.predict(features_scaled))
-    probabilities = loaded_model.predict_proba(features_scaled)[:, 1]  # Probability of positive class
-    
+def predict_fall(fall_attributes, algorithm='ml'):
+    if algorithm == 'ml':
+        # Preprocess the input features
+        features_scaled = loaded_scaler.transform(fall_attributes)
+        
+        # Make prediction
+        predictions = abs(1 - loaded_model.predict(features_scaled))  # Invert the prediction (0: Fall, 1: Stable)
+        probabilities = loaded_model.predict_proba(features_scaled)[:, 1]  # Probability of positive class
+    elif algorithm == 'dl':
+        predictions, probabilities = mlp(fall_attributes)
     return predictions, probabilities
 
 # Dictionary to hold fall events
