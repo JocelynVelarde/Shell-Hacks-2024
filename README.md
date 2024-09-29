@@ -32,9 +32,12 @@ We combine various tools to enhance safety in your spaces.
 
 ## Tools Used
 - 📌 **Computer Vision:** OpenCV
-- 📌 **Natural Language Processing:** GPT-3.5 Turbo
-- 📌 **Generative AI:** GPT-4-o
+- 📌 **Natural Language Processing:** GPT-3.5 Turbo, prompt classification
+- 📌 **Generative AI:** GPT-4-o, base64 image encoding
 - 📌 **Data Visualization:** Plotly
+- 📌 **Model Vision** YOLOv8mpose, ultralytics, pytorch
+- 📌 **Machine Learning** Random Forest (97% test set accuracy), MLP (97% test set accuracy)
+- 📌 **libraries** streamlit, CV2, ultralytics, numpy, base64, os, requests, openai, collections, datetime, torch, pickle, sklearn, joblib, pandas, numpy, fastapi, shutil, pymongo, urllib, aiohttp, json, PIL, gridfs, BASE64.
 
 ## Structure
 ```bash
@@ -62,32 +65,6 @@ streamlit_app
 │  └─ instructions.py
 │  └─ Video analysis.py
 ```
-## Libraries used 📓
-- **streamlit**
-- **CV2**
-- **ultralytics**
-- **numpy**
-- **base64**
-- **os**
-- **requests**
-- **openai**
-- **collections**
-- **datetime**
-- **torch**
-- **pickle**
-- **sklearn**
-- **joblib**
-- **pandas**
-- **numpy**
-- **fastapi**
-- **shutil**
-- **pymongo**
-- **urlib**
-- **aiohtpp**
-- **json**
-- **PIL**
-- **gridfs**
-- **BASE64**
 
 Deployed with: Streamlit Cloud
 
