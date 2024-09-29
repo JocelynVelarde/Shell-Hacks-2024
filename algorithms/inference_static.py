@@ -44,7 +44,7 @@ def calculate_angle(p1, p2, p3):
     v1_norm = np.linalg.norm(v1)
     v2_norm = np.linalg.norm(v2)
     
-    cos_angle = dot_product / (v1_norm * v2_norm)
+    cos_angle = dot_product / (v1_norm * v2_norm + 1e-6)
     angle = np.arccos(np.clip(cos_angle, -1.0, 1.0))
     
     return np.degrees(angle)
@@ -105,7 +105,7 @@ def predict_fall(fall_attributes):
     features_scaled = loaded_scaler.transform(fall_attributes)
     
     # Make prediction
-    predictions = loaded_model.predict(features_scaled)
+    predictions = abs(1 - loaded_model.predict(features_scaled))
     probabilities = loaded_model.predict_proba(features_scaled)[:, 1]  # Probability of positive class
     
     return predictions, probabilities
