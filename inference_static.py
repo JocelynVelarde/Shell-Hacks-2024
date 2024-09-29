@@ -8,7 +8,7 @@ from ultralytics import YOLO
 from pytube import YouTube
 
 # Define the model
-model = YOLO("models/yolov8m-pose.pt")
+model = YOLO("yolov8m-pose.pt")
 
 # Load the saved random forest model and scaler
 loaded_model = joblib.load('models/random_forest_model.joblib')
@@ -159,9 +159,17 @@ def save_json_data(data, output_path):
         json.dump(data, f)
     print(f"Saved JSON data at {output_path}")
 
-def main():
+def main(video_source):
     os.makedirs("output", exist_ok=True)
-    video_path = 'test/Watch Your Step! Funny Slips and Falls Compilation _ FailArmy.mp4'
+    
+    if video_source.startswith('http'):
+        print("Downloading YouTube video...")
+        video_path = download_youtube_video(video_source, "output")
+        if not video_path:
+            print("Failed to download the YouTube video. Exiting.")
+            return
+    else:
+        video_path = video_source
 
     print(f"Processing video: {video_path}")
     cap = cv2.VideoCapture(video_path)
@@ -244,4 +252,5 @@ def main():
     print("Processing complete. All outputs saved in the 'output' directory.")
 
 if __name__ == "__main__":
-    main()
+    video_source = input("Enter the path to a local video file or a YouTube URL: ")
+    main(video_source)
