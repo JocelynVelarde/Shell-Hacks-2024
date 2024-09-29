@@ -111,7 +111,8 @@ def process_frame(result):
 # Main function to process the video
 def main():
     input_dir = 'input'
-    video_path = 'input_video.avi'
+    video_name = os.listdir(input_dir)[0]
+    video_path = os.path.join(input_dir, video_name)
     
     # Open the video file
     cap = cv2.VideoCapture(video_path)
