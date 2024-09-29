@@ -1,7 +1,7 @@
 from openai import OpenAI
 
 def bounding_box_prompt(lat, lon, x1, y1, x2, y2, api_key):
-    client = OpenAI(api_key)
+    client = OpenAI(api_key = api_key)
     
     box_prompt = """
     Given the latitude and longitude of a camera, along with the bounding box coordinates (x1, y1) and (x2, y2) representing the top-left and bottom-right corners of a person's bounding box in an image captured by the camera, estimate the person's real-world position (latitude and longitude). Leverage the camera’s field of view, image resolution, and optionally, the person’s height or depth data to convert the bounding box coordinates into real-world angles and distance. Use spherical geometry to calculate the person’s geographic position relative to the camera.
@@ -22,7 +22,7 @@ def bounding_box_prompt(lat, lon, x1, y1, x2, y2, api_key):
 
     response = client.chat.completions.create(
         model="gpt-4",
-        messages=[{"role": "system", "content": box_prompt + lat + lon + x1 + y1 + x2 + y2}],
+        messages=[{"role": "system", "content": box_prompt + str(lat) + str(lon) + str(x1) + str(y1) + str(x2) + str(y2)}],
         max_tokens=600,
         temperature=0.5
     )
