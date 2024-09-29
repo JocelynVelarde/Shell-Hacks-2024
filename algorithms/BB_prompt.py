@@ -22,5 +22,6 @@ def bounding_box_prompt(lat, lon, x1, y1, x2, y2, api_key):
     )
     
     print("Position of the person: ", response.choices[0].text)
-    return response.choices[0].text
+    message = response.choices[0].text
+    return message
     

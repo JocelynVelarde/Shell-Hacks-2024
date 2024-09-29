@@ -1,9 +1,12 @@
 import streamlit as st
 import json
 import urllib.parse
+from algorithms.BB_prompt import bounding_box_prompt
 from pymongo.server_api import ServerApi
 from pymongo import MongoClient
 import pandas as pd
+
+api_key = st.secrets["OPEN_AI_KEY"]
 
 with open('config.json') as config_file:
     config = json.load(config_file)
@@ -86,5 +89,26 @@ st.write("Use a get to obtain the bounding box corners of the accident location 
 st.divider()
 
 st.subheader(":orange[Risk Analysis using camera location and person position]")
+
+# Use selected camera's latitude and longitude
+if selected_location:
+    lat = selected_location_data["latitude"]
+    lon = selected_location_data["longitude"]
+else:
+    lat = None
+    lon = None
+
+x1 = st.number_input("Enter bounding box top-left x-coordinate", format="%.2f")
+y1 = st.number_input("Enter bounding box top-left y-coordinate", format="%.2f")
+x2 = st.number_input("Enter bounding box bottom-right x-coordinate", format="%.2f")
+y2 = st.number_input("Enter bounding box bottom-right y-coordinate", format="%.2f")
+
+if st.button("Find relation between camera and person"):
+    if lat and lon and x1 and y1 and x2 and y2 and api_key:
+        result = bounding_box_prompt(lat, lon, x1, y1, x2, y2, api_key)
+        st.write("Bounding Box Prompt Result:")
+        st.write(result)
+    else:
+        st.error("Please enter all required fields.")
 
 
