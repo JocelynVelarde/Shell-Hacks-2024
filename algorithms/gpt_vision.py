@@ -54,4 +54,10 @@ def get_analysis_messages(image_paths, api_key):
     response_data = response.json()
 
     # Extract and return the output messages
-    return [choice['message']['content'] for choice in response_data.get('choices', [])]
+    output_messages = [choice['message']['content'] for choice in response_data.get('choices', [])]
+
+    # Create a dictionary with prompts as keys and output messages as values
+    result = {prompts[i]: output_messages[i] for i in range(len(prompts))}
+
+    return result
+
