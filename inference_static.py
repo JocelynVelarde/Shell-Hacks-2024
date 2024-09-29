@@ -6,6 +6,7 @@ from collections import deque, defaultdict
 import json
 from ultralytics import YOLO
 from PIL import Image
+import time
 
 # Define the model
 model = YOLO("models/yolov8m-pose.pt")
@@ -108,14 +109,63 @@ def process_frame(result):
             predictions, probabilities = predict_fall(fall_attributes)
     return keypoints, boxes, predictions, probabilities
 
+def capture_video(duration, output_path):
+    cap = cv2.VideoCapture(0)
+    
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        return
+    
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps == 0:
+        fps = 30  # Default to 30 if unable to get FPS
+    
+    # Calculate the total number of frames to capture
+    total_frames = int(duration * fps)
+    
+    # Get the width and height of the frames
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    # Define the codec and create a VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+    
+    start_time = time.time()
+    frame_count = 0
+    while frame_count < total_frames:
+        success, frame = cap.read()
+        if not success:
+            break
+        
+        # Write the frame to the video file
+        out.write(frame)
+        
+        # Display the frame (optional)
+        cv2.imshow('Frame', frame)
+        
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        
+        frame_count += 1
+    
+    # Release the camera and video writer objects
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    
+    print(f"Video saved to: {output_path}")
+
 # Main function to process the video
 def main():
+    capture_video(10, './input/input1.avi')
     input_dir = 'input'
     video_name = os.listdir(input_dir)[0]
     video_path = os.path.join(input_dir, video_name)
     
     # Open the video file
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(0)
     
     # Real-time window for display
     cv2.namedWindow('Fall Detection', cv2.WINDOW_NORMAL)
