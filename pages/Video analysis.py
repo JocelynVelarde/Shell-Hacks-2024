@@ -4,7 +4,7 @@ import gridfs
 import urllib.parse
 import json
 from moviepy.editor import VideoFileClip
-from algorithms.inference_static import download_video_from_mongoDB, process_video, upload_video_to_mongoDB, upload_json_to_mongoDB
+from algorithms.inference_static import download_video_from_mongoDB, process_video, upload_video_to_mongoDB
 
 # Load MongoDB credentials from config.json
 with open('config.json') as config_file:
@@ -86,18 +86,9 @@ if st.button("Download and Analyze Video"):
             mp4_video_bytes = f.read()
         st.video(mp4_video_bytes)
         
-         # Convert the processed .avi video to .mp4 format
-        processed_clip = VideoFileClip(output_video)
-        processed_mp4_video = output_video.replace(".avi", ".mp4")
-        processed_clip.write_videofile(processed_mp4_video, codec="libx264")
-        
         # Read and display the processed video
-        with open(processed_mp4_video, "rb") as f:
-            processed_mp4_video_bytes = f.read()
-        st.video(processed_mp4_video_bytes)
-
-        upload_json_to_mongoDB(uri, "fall_events.json")
-
-    
+        with open(output_video, "rb") as f:
+            output_video_bytes = f.read()
+        st.video(output_video_bytes)
     else:
         st.error("Failed to download video.")

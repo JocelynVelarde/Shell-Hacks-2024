@@ -2,7 +2,39 @@ import streamlit as st
 import json
 import urllib.parse
 from algorithms.gpt_vision import get_analysis_messages, chat_prompt
+import pymongo
+import gridfs
 
+# Load MongoDB credentials from config.json
+with open('config.json') as config_file:
+    config = json.load(config_file)
+
+username = urllib.parse.quote_plus(config["username"])
+password = urllib.parse.quote_plus(config["password"])
+
+uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+
+client = pymongo.MongoClient(uri)
+db = client["video_database"]
+fs = gridfs.GridFS(db)
+
+json_data = []
+def download_json_from_mongoDB():
+    
+    for file in fs.find():
+        if file.filename.endswith(".json"):
+            json_data.append(file.read())
+    return json_data
+
+json_str = str(json_data)
+data = json.loads(json_str)
+timestamp = data[0]['timestamp']
+box = data[0]['box']
+keypoints = data[0]['keypoints']
+
+st.write(f"Timestamp: {timestamp}")
+st.write(f"Box: {box}")
+st.write(f"Keypoints: {keypoints}")
 
 # Example usage in Streamlit app
 api_key = st.secrets["OPEN_AI_KEY"]
