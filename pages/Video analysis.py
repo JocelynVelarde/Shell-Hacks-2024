@@ -3,8 +3,7 @@ import pymongo
 import gridfs
 import urllib.parse
 import json
-import io
-import requests
+from moviepy.editor import VideoFileClip
 from algorithms.inference_static import download_video_from_mongoDB, process_video, upload_video_to_mongoDB
 
 # Load MongoDB credentials from config.json
@@ -69,12 +68,23 @@ if st.button("Download and Analyze Video"):
         video_bytes = grid_out.read()
         with open(selected_video, "wb") as f:
             f.write(video_bytes)
+
+        # Convert the .avi video to .mp4 format
+        clip = VideoFileClip(selected_video)
+        mp4_video = selected_video.replace(".avi", ".mp4")
+        clip.write_videofile(mp4_video, codec="libx264")
+        
+        # Process the video
         download_video_from_mongoDB(uri, selected_video)
         output_video = process_video(selected_video)
         upload_video_to_mongoDB(uri, output_video)
+        
         st.success("Video downloaded successfully and uploaded to DB!")
+        
         # Display the original video
-        st.video(video_bytes)
+        with open(mp4_video, "rb") as f:
+            mp4_video_bytes = f.read()
+        st.video(mp4_video_bytes)
         
         # Read and display the processed video
         with open(output_video, "rb") as f:
