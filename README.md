@@ -38,7 +38,29 @@ We combine various tools to enhance safety in your spaces.
 
 ## Structure
 ```bash
-
+streamlit_app 
+├─ home.py
+├─ .streamlit
+│   └─ secrets.toml
+├─ algorithms
+│  └─ BB_prompt.py
+│  └─ gpt_vision.py
+├─ api
+│  └─ main.py
+├─ assets
+│  └─ images
+├─ features
+│  └─ call_or_sms.py
+│  └─ prompt.py
+├─ input
+│  └─ input_video.avi
+│  └─ input1.avi
+├─ pages
+│  └─ Accident location.py
+│  └─ Cause of accident.py
+│  └─ Emergency call.py
+│  └─ instructions.py
+│  └─ Video analysis.py
 ```
 
 Deployed with: Streamlit Cloud
