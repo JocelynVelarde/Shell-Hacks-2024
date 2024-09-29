@@ -26,13 +26,11 @@ if uploaded_files:
             f.write(uploaded_file.getbuffer())
             image_paths.append(f"temp_{uploaded_file.name}")
 
-    messages = get_analysis_messages(image_paths, api_key)
-    # Accessing individual prompts and their corresponding messages
-    prompt1, prompt2, prompt3 = messages.keys()
-    message1, message2, message3 = messages.values()
-    st.write(f"Prompt 1: {prompt1}\nMessage 1: {message1}")
-    st.write(f"Prompt 2: {prompt2}\nMessage 2: {message2}")
-    st.write(f"Prompt 3: {prompt3}\nMessage 3: {message3}")
+    analysis_results = get_analysis_messages(image_paths, api_key)
+    
+    for i, (prompt, message) in enumerate(analysis_results.items(), 1):
+        st.subheader(f"Prompt {i}: {prompt}")
+        st.write(message)
 
 st.divider()
 st.subheader(':orange[Ask questions about the accident]')

@@ -9,7 +9,7 @@ def encode_image(image_path):
 
 # Function to get analysis messages
 def get_analysis_messages(image_paths, api_key):
-    # Encode each image and create the messages list
+    # Encode each image
     encoded_images = [
         {
             "type": "image_url",
@@ -26,38 +26,75 @@ def get_analysis_messages(image_paths, api_key):
         "Provide recommendations on how to improve the area to prevent falls."
     ]
 
-    # Create the messages list
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": prompt
-                }
-            ] + encoded_images
-        } for prompt in prompts
-    ]
-
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}"
     }
 
-    payload = {
-        "model": "gpt-4o-mini",
-        "messages": messages,
-        "max_tokens": 300
-    }
+    result = {}
 
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-    response_data = response.json()
+    for prompt in prompts:
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ] + encoded_images
+            }
+        ]
 
-    # Extract and return the output messages
-    output_messages = [choice['message']['content'] for choice in response_data.get('choices', [])]
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": messages,
+            "max_tokens": 300
+        }
 
-    # Create a dictionary with prompts as keys and output messages as values
-    result = {prompts[i]: output_messages[i] for i in range(len(prompts))}
+        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        response_data = response.json()
+
+        # Extract the output message
+        output_message = response_data['choices'][0]['message']['content']
+        result[prompt] = output_message
 
     return result
 
+# Example usage in Streamlit app
+api_key = st.secrets["OPEN_AI_KEY"]
+
+st.set_page_config(
+    page_title="EmergencyAct",
+    page_icon="🚨",
+)
+st.image("assets/images/emergency.png", use_column_width=True)
+
+st.title(':orange[Cause of Accident 🚨]')
+
+st.write("Observe the photo snapshots of the accident and analyze the possible causes to obtain recommendations on what to improve")
+
+st.divider()
+
+uploaded_files = st.file_uploader("Upload images", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
+
+if uploaded_files:
+    image_paths = []
+    for uploaded_file in uploaded_files:
+        with open(f"temp_{uploaded_file.name}", "wb") as f:
+            f.write(uploaded_file.getbuffer())
+            image_paths.append(f"temp_{uploaded_file.name}")
+
+    analysis_results = get_analysis_messages(image_paths, api_key)
+    
+    for i, (prompt, message) in enumerate(analysis_results.items(), 1):
+        st.subheader(f"Prompt {i}: {prompt}")
+        st.write(message)
+
+st.divider()
+st.subheader(':orange[Ask questions about the accident]')
+chat_input = st.text_area("Type your question here")
+if st.button("Send"):
+    respuesta = get_analysis_messages([image_paths[0]], api_key)[0]
+    st.subheader("Answer:")
+    st.write(respuesta)
