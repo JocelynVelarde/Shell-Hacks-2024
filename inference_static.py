@@ -109,10 +109,12 @@ fall_detected = False
 def process_frame(result, frame_index, frame_time):
     global consecutive_fall_count, fall_detected
     
-    keypoints, boxes = [], []
+    keypoints, boxes, scores = [], [], []
     if result.keypoints is not None and result.boxes is not None:
         keypoints = result.keypoints.xy.cpu().numpy()
         boxes = result.boxes.xyxy.cpu().numpy()
+        scores = result.boxes.conf.cpu().numpy()  # Extract confidence scores
+
         if len(keypoints) > 0 and len(boxes) > 0:
             fall_attributes = calculate_fall_attributes(keypoints, boxes)
             predictions, probabilities = predict_fall(fall_attributes)
@@ -135,7 +137,8 @@ def process_frame(result, frame_index, frame_time):
             # Reset fall detection if no keypoints/boxes are detected
             consecutive_fall_count = 0
 
-    return keypoints, boxes, predictions, probabilities
+    return keypoints, boxes, predictions, probabilities, scores  # Return confidence scores as well
+
 
 def capture_video(duration, output_path):
     cap = cv2.VideoCapture(0)
@@ -228,13 +231,13 @@ def main():
             frame_copy = frame.copy()
 
             # Process the current frame with timestamp
-            keypoints, boxes, predictions, probabilities = process_frame(result, frame_index, frame_time)
+            keypoints, boxes, predictions, probabilities, scores = process_frame(result, frame_index, frame_time)
 
             # Annotate frame with fall detection results
-            for i, (box, prediction, probability) in enumerate(zip(boxes, predictions, probabilities)):
+            for i, (box, prediction, probability, score) in enumerate(zip(boxes, predictions, probabilities, scores)):
                 x1, y1, x2, y2 = map(int, box)
                 color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
-                label = f"Person {i} - {'Fall' if prediction == 1 else 'Stable'}: {probability:.2f}"
+                label = f"Person {i} - {'Fall' if prediction == 1 else 'Stable'}: {probability:.2f}, Score: {score:.2f}"
                 cv2.rectangle(frame_copy, (x1, y1), (x2, y2), color, 2)
                 cv2.putText(frame_copy, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
                 
