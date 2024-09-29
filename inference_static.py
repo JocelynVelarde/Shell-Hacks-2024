@@ -159,17 +159,9 @@ def save_json_data(data, output_path):
         json.dump(data, f)
     print(f"Saved JSON data at {output_path}")
 
-def main(video_source):
+def main():
     os.makedirs("output", exist_ok=True)
-    
-    if video_source.startswith('http'):
-        print("Downloading YouTube video...")
-        video_path = download_youtube_video(video_source, "output")
-        if not video_path:
-            print("Failed to download the YouTube video. Exiting.")
-            return
-    else:
-        video_path = video_source
+    video_path = 'test/Watch Your Step! Funny Slips and Falls Compilation _ FailArmy.mp4'
 
     print(f"Processing video: {video_path}")
     cap = cv2.VideoCapture(video_path)
@@ -252,5 +244,4 @@ def main(video_source):
     print("Processing complete. All outputs saved in the 'output' directory.")
 
 if __name__ == "__main__":
-    video_source = input("Enter the path to a local video file or a YouTube URL: ")
-    main(video_source)
+    main()
