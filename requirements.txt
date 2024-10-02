@@ -3,5 +3,5 @@ uvicorn
 pymongo
 pandas
 openai
-gridfs
+gridfs==3.10.0
 moviepy
