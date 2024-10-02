@@ -35,24 +35,13 @@ col2.write("- Dashboard to show summary of accidents and emergencies")
 st.divider()
 st.subheader(":orange[We combine the use of several tools to make your spaces safer]")
 
-col3, col4 = st.columns(2)
-col3.subheader("📌 Computer Vision")
-col3.write("1. OpenCV")
-col3.write("2. Example")
-
-
-col4.subheader("📌 Natural Language Processing")
-col4.write("1. gpt-3.5 turbo")
-col4.write("2. Example")
-
-col5, col6 = st.columns(2)
-col5.subheader("📌 Generative AI")
-col5.write("1. gpt4-o")
-col5.write("2. Example")
-
-col6.subheader("📌 Data Visualization")
-col6.write("1. Plotly")
-col6.write("2. Example")
+st.write("📌 Computer Vision: OpenCV")
+st.write("📌 Natural Language Processing: GPT-3.5 Turbo, prompt classification")
+st.write("📌 Generative AI: GPT-4-o, base64 image encoding")
+st.write("📌 Data Visualization: Plot")
+st.write("📌 Model Vision YOLOv8mpose, ultralytics, pytorch")
+st.write("📌 Machine Learning Random Forest (97% test set accuracy), MLP (97% test set accuracy)")
+st.write("📌 libraries streamlit, CV2, ultralytics, numpy, base64, os, requests, openai, collections, datetime, torch, pickle, sklearn, joblib, pandas, numpy, fastapi, shutil, pymongo, urllib, aiohttp, json, PIL, gridfs, BASE64.")
 
 st.divider()
 st.subheader(":orange[Get Started]")
