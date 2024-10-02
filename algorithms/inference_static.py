@@ -10,6 +10,7 @@ import time
 import pymongo
 import gridfs
 import urllib.parse
+import streamlit as st
 
 
 # Define the model
@@ -19,11 +20,8 @@ model = YOLO("models/yolov8m-pose.pt")
 loaded_model = joblib.load('models/random_forest_model.joblib')
 loaded_scaler = joblib.load('models/scaler.joblib')
 
-with open('config.json') as config_file:
-    config = json.load(config_file)
-
-username = urllib.parse.quote_plus(config["username"])
-password = urllib.parse.quote_plus(config["password"])
+username = st.secrets["USERNAME"]
+password = st.secrets["PASSWORD"]
 
 uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
