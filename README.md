@@ -3,6 +3,8 @@
 
 Created for ShellHacks 2024 🦖🌴
 
+**1st Place Winners in @Waynmo challenge**
+
 ## Authors
 
 - [@JocelynVelarde](https://github.com/JocelynVelarde)
