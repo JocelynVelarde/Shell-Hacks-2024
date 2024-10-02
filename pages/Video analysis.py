@@ -2,10 +2,10 @@ import streamlit as st
 import pymongo
 import gridfs
 import os
+os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
 from moviepy.editor import VideoFileClip
 from algorithms.inference_static import download_video_from_mongoDB, process_video, upload_video_to_mongoDB
 
-os.environ["IMAGEIO_FFMPEG_EXE"] = "/usr/bin/ffmpeg"
 username = st.secrets["USERNAME"]
 password = st.secrets["PASSWORD"]
 
