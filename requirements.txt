@@ -4,4 +4,4 @@ pymongo
 pandas
 openai
 moviepy
-cv2
+opencv-python
