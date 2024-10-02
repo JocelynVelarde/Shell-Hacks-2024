@@ -1,16 +1,10 @@
 import streamlit as st
-import json
-import urllib.parse
 from algorithms.gpt_vision import get_analysis_messages, chat_prompt
 import pymongo
 import gridfs
 
-# Load MongoDB credentials from config.json
-with open('config.json') as config_file:
-    config = json.load(config_file)
-
-username = urllib.parse.quote_plus(config["username"])
-password = urllib.parse.quote_plus(config["password"])
+username = st.secrets["USERNAME"]
+password = st.secrets["PASSWORD"]
 
 uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 

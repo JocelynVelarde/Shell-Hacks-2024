@@ -1,18 +1,12 @@
 import streamlit as st
-import json
-import urllib.parse
 from algorithms.BB_prompt import AccidentPrompt
 from pymongo.server_api import ServerApi
 from pymongo import MongoClient
 import pandas as pd
 
 api_key = st.secrets["OPEN_AI_KEY"]
-
-with open('config.json') as config_file:
-    config = json.load(config_file)
-
-username = urllib.parse.quote_plus(config["username"])
-password = urllib.parse.quote_plus(config["password"])
+username = st.secrets["USERNAME"]
+password = st.secrets["PASSWORD"]
 
 uri = f"mongodb+srv://{username}:{password}@cluster0.6veno.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
