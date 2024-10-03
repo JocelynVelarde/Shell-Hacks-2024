@@ -3,7 +3,7 @@
 
 Created for ShellHacks 2024 🦖🌴
 
-**1st Place Winners in @Waynmo challenge**
+**1st Place Winners in @Waymo challenge**
 
 ## Authors
 
